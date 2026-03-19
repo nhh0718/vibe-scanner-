@@ -6,9 +6,10 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strings"
 
-	"github.com/spf13/cobra"
 	"github.com/nhh0718/vibe-scanner-/internal/output"
+	"github.com/spf13/cobra"
 )
 
 var installCmd = &cobra.Command{
@@ -109,44 +110,93 @@ func installGlobal() error {
 }
 
 func uninstallGlobal() error {
-	// Find the binary in PATH
-	path, err := exec.LookPath("vibescanner")
-	if err != nil {
-		return fmt.Errorf("VibeScanner chưa được cài đặt trong PATH: %w", err)
+	var filesToDelete []string
+
+	// 1. Find in PATH manually (WindowsApps, /usr/local/bin, etc.)
+	pathEnv := os.Getenv("PATH")
+	pathDirs := filepath.SplitList(pathEnv)
+	
+	for _, dir := range pathDirs {
+		candidate := filepath.Join(dir, "vibescanner")
+		if runtime.GOOS == "windows" {
+			candidate += ".exe"
+		}
+		if info, err := os.Stat(candidate); err == nil && !info.IsDir() {
+			filesToDelete = append(filesToDelete, candidate)
+		}
 	}
 
-	// On Windows, we can't delete a running executable directly
-	// Use a batch file to delete it after this process exits
-	if runtime.GOOS == "windows" {
-		// Create a temporary batch file to delete the executable
-		batchFile := filepath.Join(os.TempDir(), "vibescanner-uninstall.bat")
-		batchContent := fmt.Sprintf(`
+	// 2. Also get current executable (in case running from download folder)
+	execPath, _ := os.Executable()
+	if execPath != "" {
+		execPath, _ = filepath.Abs(execPath)
+		// Add if not already in list
+		found := false
+		for _, f := range filesToDelete {
+			if strings.EqualFold(f, execPath) {
+				found = true
+				break
+			}
+		}
+		if !found {
+			filesToDelete = append(filesToDelete, execPath)
+		}
+	}
+
+	if len(filesToDelete) == 0 {
+		return fmt.Errorf("không tìm thấy VibeScanner để gỡ cài đặt")
+	}
+
+	// Delete all found files
+	var deleted []string
+	var errors []string
+
+	for _, path := range filesToDelete {
+		// On Windows, use delayed deletion for running executable
+		if runtime.GOOS == "windows" {
+			batchFile := filepath.Join(os.TempDir(), fmt.Sprintf("vibe-uninstall-%d.bat", len(deleted)))
+			batchContent := fmt.Sprintf(`
 @echo off
-timeout /t 2 /nobreak >nul
-del "%s"
+timeout /t 1 /nobreak >nul
+del "%s" 2>nul
 del "%%~f0"
 `, path)
-
-		if err := os.WriteFile(batchFile, []byte(batchContent), 0644); err != nil {
-			// Fallback to direct removal
-			if err := os.Remove(path); err != nil {
-				return fmt.Errorf("không thể gỡ cài đặt (có thể do file đang chạy). Thử đóng terminal và chạy lại: %w", err)
+			if err := os.WriteFile(batchFile, []byte(batchContent), 0644); err == nil {
+				exec.Command("cmd", "/c", "start", "", batchFile).Start()
+				deleted = append(deleted, path)
+				continue
 			}
-		} else {
-			// Start the batch file silently
-			exec.Command("cmd", "/c", "start", "", batchFile).Start()
-			output.PrintSuccess("Đã gỡ cài đặt VibeScanner khỏi %s", path)
-			fmt.Println("🔄 Vui lòng đóng terminal này để hoàn tất.")
-			return nil
 		}
-	} else {
-		// Unix: directly remove
-		if err := os.Remove(path); err != nil {
-			return fmt.Errorf("không thể gỡ cài đặt: %w", err)
+		
+		// Direct deletion
+		if err := os.Remove(path); err == nil {
+			deleted = append(deleted, path)
+		} else {
+			errors = append(errors, fmt.Sprintf("%s: %v", path, err))
 		}
 	}
 
-	output.PrintSuccess("Đã gỡ cài đặt VibeScanner khỏi %s", path)
+	if len(deleted) > 0 {
+		output.PrintSuccess("Đã gỡ cài đặt VibeScanner:")
+		for _, d := range deleted {
+			fmt.Printf("   • %s\n", d)
+		}
+		if runtime.GOOS == "windows" {
+			fmt.Println("🔄 Vui lòng đóng terminal để hoàn tất.")
+		}
+	}
+
+	if len(errors) > 0 {
+		fmt.Println("\n⚠️  Không thể xóa một số file (có thể do đang chạy):")
+		for _, e := range errors {
+			fmt.Printf("   • %s\n", e)
+		}
+	}
+
+	if len(deleted) == 0 && len(errors) > 0 {
+		return fmt.Errorf("không thể gỡ cài đặt")
+	}
+
 	return nil
 }
 
