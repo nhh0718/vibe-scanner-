@@ -4,11 +4,13 @@ import (
 	"fmt"
 	"io"
 	"runtime"
+	"strings"
 
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/nhh0718/vibe-scanner-/internal/output"
+	"github.com/nhh0718/vibe-scanner-/internal/ui"
 	"github.com/spf13/cobra"
 )
 
@@ -106,22 +108,38 @@ func (m model) View() string {
 		if m.choice != "" {
 			return ""
 		}
-		return "👋 Tạm biệt!\n"
+		return ui.GetSuccessBox("Tạm biệt! Hẹn gặp lại.") + "\n"
 	}
 
-	// Header with OS and version info
+	// Build the complete view
+	var view strings.Builder
+	
+	// Logo
+	view.WriteString(ui.GetLogo())
+	view.WriteString("\n")
+	
+	// Version and OS info
 	osName := getOSName()
 	ver := version
-	if ver == "" {
+	if ver == ""	{
 		ver = "dev"
 	}
+	
+	infoStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#64748b")).Align(lipgloss.Center)
+	view.WriteString(infoStyle.Render(fmt.Sprintf("v%s • %s • Công cụ khám bệnh codebase", ver, osName)))
+	view.WriteString("\n\n")
+	
+	// Menu in bordered box
+	menuContent := m.list.View()
+	view.WriteString(ui.GetBorderedBox(menuContent, "MENU CHÍNH"))
+	view.WriteString("\n")
+	
+	// Help footer
+	helpStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#64748b")).Align(lipgloss.Center)
+	view.WriteString(helpStyle.Render("↑↓: di chuyển • enter: chọn • q/esc: thoát"))
+	view.WriteString("\n")
 
-	header := titleStyle.Render("🔍 VibeScanner")
-	header += "\n" + lipgloss.NewStyle().Foreground(lipgloss.Color("#64748b")).Render(fmt.Sprintf("v%s • %s • Công cụ khám bệnh codebase", ver, osName)) + "\n\n"
-
-	footer := "\n" + lipgloss.NewStyle().Foreground(lipgloss.Color("#64748b")).Render("q/esc: thoát • enter: chọn • ↑↓: di chuyển")
-
-	return header + m.list.View() + footer
+	return view.String()
 }
 
 // interactiveCmd opens the TUI menu
@@ -237,20 +255,22 @@ func runScanInteractive(path string) error {
 
 // runServeInteractive runs serve from interactive mode
 func runServeInteractive() error {
-	fmt.Println("\n🌐 Khởi động dashboard...")
 	results, err := output.LoadLastScan()
 	if err != nil {
-		return fmt.Errorf("không tìm thấy kết quả scan trước đó: %w", err)
+		fmt.Println(ui.GetErrorBox("Không tìm thấy kết quả scan. Hãy chạy scan trước."))
+		fmt.Println("\nNhấn Enter để quay lại menu...")
+		fmt.Scanln()
+		return nil
 	}
-	fmt.Println("📂 Dashboard đang chạy tại http://localhost:7420")
-	fmt.Println("⚠️  Nhấn Ctrl+C để dừng server và quay lại menu...")
 	
 	// Run dashboard - this will block until Ctrl+C
 	if err := output.ServeDashboard(results, 7420); err != nil {
-		fmt.Printf("\n⚠️  Server dừng: %v\n", err)
+		fmt.Println(ui.GetErrorBox(fmt.Sprintf("Lỗi server: %v", err)))
+	} else {
+		fmt.Println(ui.GetSuccessBox("Dashboard đã dừng thành công"))
 	}
 	
-	fmt.Println("\n✅ Dashboard đã dừng. Nhấn Enter để quay lại menu...")
+	fmt.Println("\nNhấn Enter để quay lại menu...")
 	fmt.Scanln()
 	return nil
 }

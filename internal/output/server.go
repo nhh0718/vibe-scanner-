@@ -1,9 +1,14 @@
 package output
 
 import (
+	"context"
 	"fmt"
 	"io/fs"
 	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/nhh0718/vibe-scanner-/internal/ai"
@@ -83,8 +88,47 @@ func ServeDashboard(results *models.ScanResult, port int) error {
 	})
 
 	addr := fmt.Sprintf("localhost:%d", port)
-	fmt.Printf("🌐 Dashboard running at http://%s\n", addr)
-	return r.Run(addr)
+	
+	// Create HTTP server
+	srv := &http.Server{
+		Addr:    addr,
+		Handler: r,
+	}
+	
+	// Channel to listen for errors from server
+	serverErrors := make(chan error, 1)
+	
+	// Start server in goroutine
+	go func() {
+		fmt.Printf("🌐 Dashboard running at http://%s\n", addr)
+		fmt.Println("⚠️  Nhấn Ctrl+C để dừng server và quay lại menu...")
+		serverErrors <- srv.ListenAndServe()
+	}()
+	
+	// Channel to listen for interrupt signal
+	shutdown := make(chan os.Signal, 1)
+	signal.Notify(shutdown, os.Interrupt, syscall.SIGTERM)
+	
+	// Block until we receive signal or error
+	select {
+	case err := <-serverErrors:
+		if err != nil && err != http.ErrServerClosed {
+			return fmt.Errorf("server error: %w", err)
+		}
+	case <-shutdown:
+		fmt.Println("\n🛡️  Đang dừng server...")
+		
+		// Give outstanding requests 5 seconds to complete
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		
+		if err := srv.Shutdown(ctx); err != nil {
+			srv.Close()
+			return fmt.Errorf("could not gracefully shutdown: %w", err)
+		}
+	}
+	
+	return nil
 }
 
 // generateAIExplanation tạo giải thích từ AI cho finding
