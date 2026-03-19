@@ -147,28 +147,48 @@ func uninstallGlobal() error {
 		return fmt.Errorf("không tìm thấy VibeScanner để gỡ cài đặt")
 	}
 
-	// Delete all found files
-	var deleted []string
-	var errors []string
-
-	for _, path := range filesToDelete {
-		// On Windows, use delayed deletion for running executable
-		if runtime.GOOS == "windows" {
-			batchFile := filepath.Join(os.TempDir(), fmt.Sprintf("vibe-uninstall-%d.bat", len(deleted)))
-			batchContent := fmt.Sprintf(`
-@echo off
-timeout /t 1 /nobreak >nul
-del "%s" 2>nul
-del "%%~f0"
-`, path)
-			if err := os.WriteFile(batchFile, []byte(batchContent), 0644); err == nil {
-				exec.Command("cmd", "/c", "start", "", batchFile).Start()
-				deleted = append(deleted, path)
-				continue
-			}
+	// On Windows, create a single batch script to delete all files
+	if runtime.GOOS == "windows" {
+		batchFile := filepath.Join(os.TempDir(), "vibe-uninstall.bat")
+		var batchContent strings.Builder
+		batchContent.WriteString("@echo off\n")
+		batchContent.WriteString("echo Uninstalling VibeScanner...\n")
+		batchContent.WriteString("timeout /t 2 /nobreak >nul\n")
+		
+		for _, path := range filesToDelete {
+			absPath, _ := filepath.Abs(path)
+			batchContent.WriteString(fmt.Sprintf("if exist \"%s\" (\n", absPath))
+			batchContent.WriteString(fmt.Sprintf("    del \"%s\" 2>nul\n", absPath))
+			batchContent.WriteString(fmt.Sprintf("    if %%ERRORLEVEL%% EQU 0 (\n"))
+			batchContent.WriteString(fmt.Sprintf("        echo Deleted: %s\n", absPath))
+			batchContent.WriteString(fmt.Sprintf("    ) else (\n"))
+			batchContent.WriteString(fmt.Sprintf("        echo Failed to delete: %s\n", absPath))
+			batchContent.WriteString(fmt.Sprintf("    )\n"))
+			batchContent.WriteString(")\n")
 		}
 		
-		// Direct deletion
+		batchContent.WriteString("del \"%~f0\"\n")
+		
+		if err := os.WriteFile(batchFile, []byte(batchContent.String()), 0644); err != nil {
+			return fmt.Errorf("không thể tạo batch script: %w", err)
+		}
+		
+		// Start the batch file minimized
+		exec.Command("cmd", "/c", "start", "/min", batchFile).Start()
+		
+		output.PrintSuccess("Đã lên lịch gỡ cài đặt VibeScanner:")
+		for _, d := range filesToDelete {
+			fmt.Printf("   • %s\n", d)
+		}
+		fmt.Println("🔄 Vui lòng đóng terminal để hoàn tất.")
+		return nil
+	}
+
+	// Unix: directly delete files
+	var deleted []string
+	var errors []string
+	
+	for _, path := range filesToDelete {
 		if err := os.Remove(path); err == nil {
 			deleted = append(deleted, path)
 		} else {
@@ -181,13 +201,10 @@ del "%%~f0"
 		for _, d := range deleted {
 			fmt.Printf("   • %s\n", d)
 		}
-		if runtime.GOOS == "windows" {
-			fmt.Println("🔄 Vui lòng đóng terminal để hoàn tất.")
-		}
 	}
 
 	if len(errors) > 0 {
-		fmt.Println("\n⚠️  Không thể xóa một số file (có thể do đang chạy):")
+		fmt.Println("\n⚠️  Không thể xóa một số file:")
 		for _, e := range errors {
 			fmt.Printf("   • %s\n", e)
 		}
