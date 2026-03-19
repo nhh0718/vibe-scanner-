@@ -6,8 +6,9 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 
-	"github.com/nhh0718/vibe-scanner-/internal/output"
+	"github.com/nhh0718/vibe-scanner-/internal/ui"
 	"github.com/spf13/cobra"
 )
 
@@ -124,7 +125,7 @@ var configInitCmd = &cobra.Command{
 			return err
 		}
 
-		output.PrintSuccess("Đã tạo config tại: %s", configPath)
+		fmt.Println(ui.GetSuccessBox(fmt.Sprintf("Đã tạo cấu hình tại: %s", configPath)))
 		return nil
 	},
 }
@@ -186,7 +187,7 @@ var configSetCmd = &cobra.Command{
 			return err
 		}
 
-		output.PrintSuccess("Đã cập nhật %s = %v", key, value)
+		fmt.Println(ui.GetSuccessBox(fmt.Sprintf("Đã cập nhật %s = %v", key, value)))
 		return nil
 	},
 }
@@ -207,14 +208,41 @@ func runConfigList() error {
 		return err
 	}
 
-	fmt.Printf("📁 Config file: %s\n\n", configPath)
-	fmt.Printf("  ollama_url:      %s\n", config.OllamaURL)
-	fmt.Printf("  default_model:   %s\n", config.DefaultModel)
-	fmt.Printf("  theme:           %s\n", config.Theme)
-	fmt.Printf("  auto_open:       %v\n", config.AutoOpen)
-	fmt.Printf("  ignore_paths:    %v\n", config.IgnorePaths)
-	fmt.Printf("  custom_rules:    %v\n", config.CustomRules)
-	fmt.Printf("  installed_models: %v\n", config.InstalledModels)
+	var main strings.Builder
+	main.WriteString(ui.SectionLabel("Thiết lập hiện tại"))
+	main.WriteString("\n\n")
+	main.WriteString(ui.KeyValue("Ollama URL", config.OllamaURL))
+	main.WriteString("\n")
+	main.WriteString(ui.KeyValue("Model mặc định", config.DefaultModel))
+	main.WriteString("\n")
+	main.WriteString(ui.KeyValue("Giao diện", config.Theme))
+	main.WriteString("\n")
+	main.WriteString(ui.KeyValue("Tự mở báo cáo", fmt.Sprintf("%v", config.AutoOpen)))
+	main.WriteString("\n")
+	main.WriteString(ui.KeyValue("Model đã lưu", fmt.Sprintf("%d", len(config.InstalledModels))))
+
+	var side strings.Builder
+	side.WriteString(ui.SectionLabel("Tệp cấu hình"))
+	side.WriteString("\n\n")
+	side.WriteString(configPath)
+	side.WriteString("\n\n")
+	side.WriteString(ui.SectionLabel("Danh sách bỏ qua"))
+	side.WriteString("\n\n")
+	side.WriteString(ui.BulletList(config.IgnorePaths))
+	if len(config.CustomRules) > 0 {
+		side.WriteString("\n\n")
+		side.WriteString(ui.SectionLabel("Quy tắc tùy chỉnh"))
+		side.WriteString("\n\n")
+		side.WriteString(ui.BulletList(config.CustomRules))
+	}
+
+	fmt.Println(ui.RenderScreen(
+		"CẤU HÌNH HỆ THỐNG",
+		"Theo dõi các thiết lập đang được VibeScanner sử dụng",
+		main.String(),
+		side.String(),
+		[]string{"vibescanner config set <khóa> <giá trị>", "vibescanner config init để tạo mặc định"},
+	))
 	return nil
 }
 

@@ -2,9 +2,10 @@ package cmd
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/nhh0718/vibe-scanner-/internal/ai"
-	"github.com/nhh0718/vibe-scanner-/internal/output"
+	"github.com/nhh0718/vibe-scanner-/internal/ui"
 	"github.com/spf13/cobra"
 )
 
@@ -20,8 +21,7 @@ Các subcommands:
   remove   - Gỡ bỏ model
   status   - Kiểm tra trạng thái Ollama`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		// Default action: show status
-		return runAIStatus()
+		return runAISetupInteractive()
 	},
 }
 
@@ -35,27 +35,47 @@ var aiStatusCmd = &cobra.Command{
 }
 
 func runAIStatus() error {
-	fmt.Println("🤖 VibeScanner AI Status")
-	fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+	var main strings.Builder
+	var side strings.Builder
 
 	if ai.IsOllamaAvailable() {
-		output.PrintSuccess("Ollama đang chạy")
+		main.WriteString(ui.SuccessText("Ollama đang chạy và sẵn sàng xử lý yêu cầu"))
+		main.WriteString("\n\n")
 		models, err := ai.ListInstalledModels()
 		if err != nil {
-			output.PrintError("Không thể liệt kê models: %v", err)
+			main.WriteString(ui.ErrorText(fmt.Sprintf("Không thể liệt kê model: %v", err)))
 		} else if len(models) > 0 {
-			fmt.Println("\n📦 Models đã cài:")
-			for _, m := range models {
-				fmt.Printf("  • %s\n", m)
+			main.WriteString(ui.SectionLabel("Model đã cài"))
+			main.WriteString("\n\n")
+			for i, m := range models {
+				main.WriteString(fmt.Sprintf("[%02d] %s\n", i+1, m))
 			}
 		} else {
-			fmt.Println("\n⚠️ Chưa có model nào được cài đặt")
+			main.WriteString(ui.WarningText("Chưa có model nào được cài đặt"))
 		}
+		side.WriteString(ui.SectionLabel("Tóm tắt"))
+		side.WriteString("\n\n")
+		side.WriteString(ui.KeyValue("Runtime", "Đang hoạt động"))
 	} else {
-		output.PrintError("Ollama chưa được cài đặt hoặc không chạy")
-		fmt.Println("\n📥 Cài đặt Ollama:")
-		fmt.Println("   1. Truy cập: https://ollama.ai/download")
+		main.WriteString(ui.ErrorText("Ollama chưa được cài đặt hoặc chưa chạy"))
+		main.WriteString("\n\n")
+		main.WriteString(ui.BulletList([]string{
+			"Truy cập https://ollama.ai/download để cài đặt.",
+			"Hoàn tất cài đặt đúng theo hệ điều hành.",
+			"Khởi động bằng lệnh: ollama serve",
+		}))
+		side.WriteString(ui.SectionLabel("Khuyến nghị"))
+		side.WriteString("\n\n")
+		side.WriteString(ui.BulletList([]string{"Dùng vibescanner ai-setup để mở giao diện đầy đủ.", "Ưu tiên cài model 3B nếu máy tầm trung."}))
 	}
+
+	fmt.Println(ui.RenderScreen(
+		"TRẠNG THÁI AI CỤC BỘ",
+		"Kiểm tra nhanh tình trạng Ollama và model đã cài",
+		main.String(),
+		side.String(),
+		[]string{"vibescanner ai-setup mở giao diện đầy đủ", "vibescanner ai-setup list xem danh sách model"},
+	))
 	return nil
 }
 
@@ -72,13 +92,16 @@ var aiListCmd = &cobra.Command{
 			return fmt.Errorf("lỗi khi liệt kê models: %w", err)
 		}
 		if len(models) == 0 {
-			fmt.Println("📭 Chưa có model nào được cài đặt.")
+			fmt.Println(ui.GetInfoBox("Chưa có model nào được cài đặt."))
 			return nil
 		}
-		fmt.Println("📦 Models đã cài đặt:")
-		for i, m := range models {
-			fmt.Printf("  %d. %s\n", i+1, m)
-		}
+		fmt.Println(ui.GetBorderedBox(strings.Join(func() []string {
+			lines := []string{ui.SectionLabel("Danh sách model đã cài"), ""}
+			for i, m := range models {
+				lines = append(lines, fmt.Sprintf("[%02d] %s", i+1, m))
+			}
+			return lines
+		}(), "\n"), "MODEL ĐÃ CÀI"))
 		return nil
 	},
 }
@@ -94,16 +117,16 @@ var aiInstallCmd = &cobra.Command{
 			model = args[0]
 		}
 		if !ai.IsOllamaAvailable() {
-			fmt.Println("📥 Cài đặt Ollama trước...")
+			fmt.Println(ui.GetInfoBox("Đang cài Ollama trước khi tải model..."))
 			if err := ai.DownloadOllama(); err != nil {
 				return fmt.Errorf("lỗi khi tải Ollama: %w", err)
 			}
 		}
-		fmt.Printf("📥 Đang tải model %s...\n", model)
+		fmt.Println(ui.GetInfoBox(fmt.Sprintf("Đang tải model %s", model)))
 		if err := ai.PullModel(model); err != nil {
 			return fmt.Errorf("lỗi khi tải model: %w", err)
 		}
-		output.PrintSuccess("Đã cài đặt model %s", model)
+		fmt.Println(ui.GetSuccessBox(fmt.Sprintf("Đã cài đặt model %s", model)))
 		return nil
 	},
 }
@@ -118,11 +141,11 @@ var aiRemoveCmd = &cobra.Command{
 		if !ai.IsOllamaAvailable() {
 			return fmt.Errorf("Ollama chưa chạy")
 		}
-		fmt.Printf("🗑️  Đang gỡ bỏ model %s...\n", model)
+		fmt.Println(ui.GetInfoBox(fmt.Sprintf("Đang gỡ bỏ model %s", model)))
 		if err := ai.RemoveModel(model); err != nil {
 			return fmt.Errorf("lỗi khi gỡ model: %w", err)
 		}
-		output.PrintSuccess("Đã gỡ bỏ model %s", model)
+		fmt.Println(ui.GetSuccessBox(fmt.Sprintf("Đã gỡ bỏ model %s", model)))
 		return nil
 	},
 }

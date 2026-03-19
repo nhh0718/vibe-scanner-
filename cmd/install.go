@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/nhh0718/vibe-scanner-/internal/output"
+	"github.com/nhh0718/vibe-scanner-/internal/ui"
 	"github.com/spf13/cobra"
 )
 
@@ -100,11 +101,16 @@ func installGlobal() error {
 	}
 
 	output.PrintSuccess("Đã cài đặt VibeScanner!")
-	fmt.Printf("   Vị trí: %s\n", targetPath)
-	fmt.Println()
-	fmt.Println("Bạn có thể chạy từ bất kỳ đâu:")
-	fmt.Println("  vibescanner scan ./my-project")
-	fmt.Println("  vibescanner --help")
+	fmt.Println(ui.GetBorderedBox(strings.Join([]string{
+		ui.SectionLabel("Thông tin cài đặt"),
+		"",
+		ui.KeyValue("Vị trí", targetPath),
+		"",
+		ui.SectionLabel("Lệnh gợi ý"),
+		"",
+		"vibescanner scan ./my-project",
+		"vibescanner --help",
+	}, "\n"), "CÀI ĐẶT TOÀN CỤC"))
 	
 	return nil
 }
@@ -177,10 +183,14 @@ func uninstallGlobal() error {
 		exec.Command("cmd", "/c", "start", "/min", batchFile).Start()
 		
 		output.PrintSuccess("Đã lên lịch gỡ cài đặt VibeScanner:")
-		for _, d := range filesToDelete {
-			fmt.Printf("   • %s\n", d)
-		}
-		fmt.Println("🔄 Vui lòng đóng terminal để hoàn tất.")
+		fmt.Println(ui.GetBorderedBox(strings.Join(func() []string {
+			lines := []string{ui.SectionLabel("Tệp sẽ được gỡ"), ""}
+			for _, d := range filesToDelete {
+				lines = append(lines, "• "+d)
+			}
+			lines = append(lines, "", ui.Muted("Vui lòng đóng terminal để hoàn tất."))
+			return lines
+		}(), "\n"), "ĐANG GỠ CÀI ĐẶT"))
 		return nil
 	}
 
@@ -198,16 +208,23 @@ func uninstallGlobal() error {
 
 	if len(deleted) > 0 {
 		output.PrintSuccess("Đã gỡ cài đặt VibeScanner:")
-		for _, d := range deleted {
-			fmt.Printf("   • %s\n", d)
-		}
+		fmt.Println(ui.GetBorderedBox(strings.Join(func() []string {
+			lines := []string{}
+			for _, d := range deleted {
+				lines = append(lines, "• "+d)
+			}
+			return lines
+		}(), "\n"), "TỆP ĐÃ XÓA"))
 	}
 
 	if len(errors) > 0 {
-		fmt.Println("\n⚠️  Không thể xóa một số file:")
-		for _, e := range errors {
-			fmt.Printf("   • %s\n", e)
-		}
+		fmt.Println("\n" + ui.GetBorderedBox(strings.Join(func() []string {
+			lines := []string{ui.WarningText("Không thể xóa một số tệp"), ""}
+			for _, e := range errors {
+				lines = append(lines, "• "+e)
+			}
+			return lines
+		}(), "\n"), "CẢNH BÁO"))
 	}
 
 	if len(deleted) == 0 && len(errors) > 0 {

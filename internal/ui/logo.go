@@ -1,6 +1,8 @@
 package ui
 
 import (
+	"strings"
+
 	"github.com/charmbracelet/lipgloss"
 )
 
@@ -12,74 +14,45 @@ var (
 
 // GetLogo returns the iNET ASCII logo with proper colors
 func GetLogo() string {
-	// Blue style for 'i' and 'N'
 	blueStyle := lipgloss.NewStyle().Foreground(BlueColor).Bold(true)
-	
-	// Red style for 'E'
 	redStyle := lipgloss.NewStyle().Foreground(RedColor).Bold(true)
-	
-	// Star for dot on 'i'
 	starStyle := lipgloss.NewStyle().Foreground(BlueColor).Bold(true)
-	
-	logo := ""
-	
-	// Line 1: Star (dot on i) - add space before
-	logo += "   " + starStyle.Render("★") + "\n"
-	
-	// Line 2: Top of letters
-	logo += "  " + blueStyle.Render("██") + "   " + 
-		blueStyle.Render("███╗   ██╗") + "  " +
-		redStyle.Render("███████╗") + "  " +
-		blueStyle.Render("████████╗") + "\n"
-	
-	// Line 3
-	logo += "  " + blueStyle.Render("██") + "   " +
-		blueStyle.Render("████╗  ██║") + "  " +
-		redStyle.Render("██╔════╝") + "  " +
-		blueStyle.Render("╚══██╔══╝") + "\n"
-	
-	// Line 4
-	logo += "  " + blueStyle.Render("██") + "   " +
-		blueStyle.Render("██╔██╗ ██║") + "  " +
-		redStyle.Render("█████╗  ") + "  " +
-		blueStyle.Render("   ██║   ") + "\n"
-	
-	// Line 5
-	logo += "  " + blueStyle.Render("██") + "   " +
-		blueStyle.Render("██║╚██╗██║") + "  " +
-		redStyle.Render("██╔══╝  ") + "  " +
-		blueStyle.Render("   ██║   ") + "\n"
-	
-	// Line 6
-	logo += "  " + blueStyle.Render("██") + "   " +
-		blueStyle.Render("██║ ╚████║") + "  " +
-		redStyle.Render("███████╗") + "  " +
-		blueStyle.Render("   ██║   ") + "\n"
-	
-	// Line 7: Bottom
-	logo += "  " + blueStyle.Render("╚═") + "   " +
-		blueStyle.Render("╚═╝  ╚═══╝") + "  " +
-		redStyle.Render("╚══════╝") + "  " +
-		blueStyle.Render("   ╚═╝   ") + "\n"
-	
-	return logo
+	captionStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#8FA9CC")).Italic(true)
+
+	lines := []string{
+		"    " + starStyle.Render("★"),
+		"  " + blueStyle.Render("██") + "    " + blueStyle.Render("███╗   ██╗") + "   " + redStyle.Render("███████╗") + "   " + blueStyle.Render("████████╗"),
+		"  " + blueStyle.Render("██") + "    " + blueStyle.Render("████╗  ██║") + "   " + redStyle.Render("██╔════╝") + "   " + blueStyle.Render("╚══██╔══╝"),
+		"  " + blueStyle.Render("██") + "    " + blueStyle.Render("██╔██╗ ██║") + "   " + redStyle.Render("█████╗  ") + "   " + blueStyle.Render("   ██║   "),
+		"  " + blueStyle.Render("██") + "    " + blueStyle.Render("██║╚██╗██║") + "   " + redStyle.Render("██╔══╝  ") + "   " + blueStyle.Render("   ██║   "),
+		"  " + blueStyle.Render("██") + "    " + blueStyle.Render("██║ ╚████║") + "   " + redStyle.Render("███████╗") + "   " + blueStyle.Render("   ██║   "),
+		"  " + blueStyle.Render("╚═") + "    " + blueStyle.Render("╚═╝  ╚═══╝") + "   " + redStyle.Render("╚══════╝") + "   " + blueStyle.Render("   ╚═╝   "),
+		captionStyle.Render("Bộ công cụ quét mã nguồn và phân tích chất lượng dự án"),
+	}
+
+	return strings.Join(lines, "\n")
 }
 
 // GetBorderedBox returns content wrapped in a bordered box
 func GetBorderedBox(content string, title string) string {
 	boxStyle := lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
-		BorderForeground(BlueColor).
+		BorderForeground(lineColor).
+		Background(surfaceSoft).
+		Foreground(whiteSoftColor).
 		Padding(1, 2).
-		Width(70)
+		Width(AppWidth - 20)
 	
 	if title != "" {
 		titleStyle := lipgloss.NewStyle().
-			Foreground(BlueColor).
+			Foreground(lipgloss.Color("#FFFFFF")).
+			Background(BlueColor).
 			Bold(true).
+			Padding(0, 1).
 			Align(lipgloss.Center)
 		titleText := titleStyle.Render(title)
-		content = titleText + "\n\n" + content
+		divider := lipgloss.NewStyle().Foreground(subtleColor).Render(strings.Repeat("─", AppWidth-28))
+		content = titleText + "\n" + divider + "\n\n" + content
 	}
 	
 	return boxStyle.Render(content)
@@ -89,9 +62,10 @@ func GetBorderedBox(content string, title string) string {
 func GetInfoBox(content string) string {
 	infoStyle := lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
-		BorderForeground(BlueColor).
-		Padding(0, 1).
-		Foreground(lipgloss.Color("#64748b"))
+		BorderForeground(lineColor).
+		Background(surfaceSoft).
+		Padding(0, 2).
+		Foreground(highlightColor)
 	
 	return infoStyle.Render("ℹ " + content)
 }
@@ -100,9 +74,10 @@ func GetInfoBox(content string) string {
 func GetSuccessBox(content string) string {
 	successStyle := lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
-		BorderForeground(lipgloss.Color("#22c55e")).
-		Padding(0, 1).
-		Foreground(lipgloss.Color("#22c55e"))
+		BorderForeground(greenColor).
+		Background(surfaceSoft).
+		Padding(0, 2).
+		Foreground(greenColor)
 	
 	return successStyle.Render("✓ " + content)
 }
@@ -112,7 +87,8 @@ func GetErrorBox(content string) string {
 	errorStyle := lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
 		BorderForeground(RedColor).
-		Padding(0, 1).
+		Background(surfaceSoft).
+		Padding(0, 2).
 		Foreground(RedColor)
 	
 	return errorStyle.Render("✗ " + content)

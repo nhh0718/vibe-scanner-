@@ -9,9 +9,11 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"time"
 
-	"github.com/fatih/color"
+	"github.com/nhh0718/vibe-scanner-/internal/output"
+	"github.com/nhh0718/vibe-scanner-/internal/ui"
 	"github.com/spf13/cobra"
 )
 
@@ -27,7 +29,7 @@ var updateCmd = &cobra.Command{
 }
 
 func runUpdate() error {
-	fmt.Println("🔍 Đang kiểm tra phiên bản mới...")
+	output.PrintInfo("Đang kiểm tra phiên bản mới...")
 
 	// Get latest release info from GitHub API
 	latestVersion, downloadURL, err := getLatestReleaseInfo()
@@ -38,18 +40,26 @@ func runUpdate() error {
 	// Check if already up to date
 	currentVersion := version
 	if currentVersion == "dev" {
-		fmt.Println("⚠️  Phiên bản dev (build từ source). Không thể tự động update.")
-		fmt.Println("   Vui lòng build lại từ source hoặc tải binary từ GitHub.")
+		fmt.Println(outputWarningBlock(
+			"Phiên bản dev không thể tự động cập nhật.",
+			[]string{"Vui lòng build lại từ source.", "Hoặc tải binary mới từ GitHub release."},
+		))
 		return nil
 	}
 
 	if latestVersion == currentVersion {
-		color.Green("✅ Bạn đang dùng phiên bản mới nhất (%s)", currentVersion)
+		output.PrintSuccess("Bạn đang dùng phiên bản mới nhất (%s)", currentVersion)
 		return nil
 	}
 
-	fmt.Printf("📦 Phiên bản mới: %s (hiện tại: %s)\n", latestVersion, currentVersion)
-	fmt.Println("📥 Đang tải xuống...")
+	fmt.Println(outputInfoBlock(
+		"Thông tin phiên bản",
+		[]string{
+			fmt.Sprintf("Phiên bản hiện tại: %s", currentVersion),
+			fmt.Sprintf("Phiên bản mới: %s", latestVersion),
+		},
+	))
+	output.PrintInfo("Đang tải xuống gói cập nhật...")
 
 	// Download new binary
 	tempFile, err := downloadBinary(downloadURL)
@@ -58,13 +68,12 @@ func runUpdate() error {
 	}
 	// Don't defer os.Remove - let installBinary handle cleanup on Windows
 
-	fmt.Println("🔧 Đang cài đặt...")
+	output.PrintInfo("Đang cài đặt phiên bản mới...")
 
 	// Uninstall old version if installed globally
 	if isGloballyInstalled() {
 		if err := uninstallGlobal(); err != nil {
-			// Non-fatal: continue with install
-			fmt.Printf("⚠️  Không thể gỡ bản cũ: %v\n", err)
+			fmt.Println(outputWarningBlock("Không thể gỡ bản cũ trước khi cập nhật.", []string{err.Error(), "Vẫn tiếp tục cài đè phiên bản mới."}))
 		}
 	}
 
@@ -73,9 +82,21 @@ func runUpdate() error {
 		return fmt.Errorf("lỗi khi cài đặt: %w", err)
 	}
 
-	color.Green("✅ Đã cập nhật lên %s!", latestVersion)
-	fmt.Println("🚀 Chạy 'vibescanner --version' để kiểm tra.")
+	output.PrintSuccess("Đã cập nhật lên %s!", latestVersion)
+	fmt.Println(outputInfoBlock("Bước tiếp theo", []string{"Chạy vibescanner --version để kiểm tra.", "Nếu đang ở Windows, hãy mở terminal mới nếu cần."}))
 	return nil
+}
+
+func outputInfoBlock(title string, lines []string) string {
+	return ui.GetBorderedBox(strings.Join(lines, "\n"), strings.ToUpper(title))
+}
+
+func outputWarningBlock(title string, lines []string) string {
+	content := []string{ui.WarningText(title), ""}
+	for _, line := range lines {
+		content = append(content, "• "+line)
+	}
+	return ui.GetBorderedBox(strings.Join(content, "\n"), "CẢNH BÁO")
 }
 
 func getLatestReleaseInfo() (version, url string, err error) {

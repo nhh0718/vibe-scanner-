@@ -8,29 +8,9 @@ import (
 
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
 	"github.com/nhh0718/vibe-scanner-/internal/output"
 	"github.com/nhh0718/vibe-scanner-/internal/ui"
 	"github.com/spf13/cobra"
-)
-
-var (
-	// Styles
-	titleStyle = lipgloss.NewStyle().
-		Bold(true).
-		Foreground(lipgloss.Color("#60a5fa")).
-		Padding(0, 1)
-
-	itemStyle = lipgloss.NewStyle().
-		Padding(0, 0, 0, 2)
-
-	selectedItemStyle = lipgloss.NewStyle().
-		Padding(0, 0, 0, 1).
-		Foreground(lipgloss.Color("#a78bfa")).
-		Bold(true)
-
-	descStyle = lipgloss.NewStyle().
-		Foreground(lipgloss.Color("#94a3b8"))
 )
 
 // MenuItem represents a menu option
@@ -55,26 +35,7 @@ func (d menuDelegate) Render(w io.Writer, m list.Model, index int, listItem list
 		return
 	}
 
-	numberStyle := lipgloss.NewStyle().
-		Foreground(ui.BlueColor).
-		Bold(true).
-		Width(4)
-	
-	var str string
-	if index == m.Index() {
-		// Selected item
-		num := numberStyle.Render(fmt.Sprintf("[%d]", i.Number))
-		title := selectedItemStyle.Render("▸ " + i.Title)
-		str = num + " " + title
-		str += "\n" + descStyle.Render("     "+i.Description)
-	} else {
-		// Normal item
-		num := numberStyle.Render(fmt.Sprintf(" %d ", i.Number))
-		title := itemStyle.Render(i.Title)
-		str = num + " " + title
-		str += "\n" + descStyle.Render("     "+i.Description)
-	}
-	fmt.Fprint(w, str)
+	fmt.Fprint(w, ui.NumberedLine(i.Number, i.Title, i.Description, index == m.Index()))
 }
 
 // Model for bubbletea
@@ -91,7 +52,8 @@ func (m model) Init() tea.Cmd {
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
-		m.list.SetWidth(msg.Width)
+		_ = msg
+		m.list.SetWidth(ui.MainColumnWidth - 8)
 		return m, nil
 
 	case tea.KeyMsg:
@@ -123,35 +85,38 @@ func (m model) View() string {
 		return ui.GetSuccessBox("Tạm biệt! Hẹn gặp lại.") + "\n"
 	}
 
-	// Build the complete view
-	var view strings.Builder
-	
-	// Logo
-	view.WriteString(ui.GetLogo())
-	view.WriteString("\n")
-	
-	// Version and OS info
 	osName := getOSName()
 	ver := version
-	if ver == ""	{
+	if ver == "" {
 		ver = "dev"
 	}
-	
-	infoStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#64748b")).Align(lipgloss.Center)
-	view.WriteString(infoStyle.Render(fmt.Sprintf("v%s • %s • Công cụ khám bệnh codebase", ver, osName)))
-	view.WriteString("\n\n")
-	
-	// Menu in bordered box
-	menuContent := m.list.View()
-	view.WriteString(ui.GetBorderedBox(menuContent, "MENU CHÍNH"))
-	view.WriteString("\n")
-	
-	// Help footer
-	helpStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#64748b")).Align(lipgloss.Center)
-	view.WriteString(helpStyle.Render("↑↓: di chuyển • enter: chọn • q/esc: thoát"))
-	view.WriteString("\n")
 
-	return view.String()
+	var side strings.Builder
+	side.WriteString(ui.SectionLabel("Trạng thái hệ thống"))
+	side.WriteString("\n\n")
+	side.WriteString(ui.KeyValue("Phiên bản", "v"+ver))
+	side.WriteString("\n")
+	side.WriteString(ui.KeyValue("Hệ điều hành", osName))
+	side.WriteString("\n")
+	side.WriteString(ui.KeyValue("Dashboard", "localhost:7420"))
+	side.WriteString("\n")
+	side.WriteString(ui.KeyValue("AI cục bộ", "Sẵn sàng cấu hình"))
+	side.WriteString("\n\n")
+	side.WriteString(ui.SectionLabel("Lộ trình đề xuất"))
+	side.WriteString("\n\n")
+	side.WriteString(ui.BulletList([]string{
+		"Quét dự án trước khi mở bảng điều khiển.",
+		"Thiết lập AI để nhận giải thích lỗi chi tiết.",
+		"Dùng cài đặt toàn cục để gọi lệnh ở mọi nơi.",
+	}))
+
+	return ui.RenderScreen(
+		"TRUNG TÂM ĐIỀU KHIỂN",
+		fmt.Sprintf("VibeScanner chạy trên %s • giao diện dòng lệnh tối ưu", osName),
+		m.list.View(),
+		side.String(),
+		[]string{"↑/↓ di chuyển", "Enter chọn", "Q hoặc Esc thoát"},
+	)
 }
 
 // interactiveCmd opens the TUI menu
@@ -205,7 +170,7 @@ func runInteractiveMenu() error {
 			},
 		}
 
-		l := list.New(items, menuDelegate{}, 60, 14)
+		l := list.New(items, menuDelegate{}, ui.MainColumnWidth-8, 18)
 		l.Title = ""
 		l.SetShowStatusBar(false)
 		l.SetFilteringEnabled(false)
@@ -228,7 +193,7 @@ func runInteractiveMenu() error {
 		// Execute the chosen command
 		switch m.choice {
 		case "scan":
-			fmt.Println("\n📁 Kéo thả thư mục project vào đây hoặc nhập đường dẫn:")
+			fmt.Println(ui.GetInfoBox("Nhập hoặc kéo thả đường dẫn dự án cần quét"))
 			fmt.Print("> ")
 			var path string
 			fmt.Scanln(&path)
@@ -236,7 +201,7 @@ func runInteractiveMenu() error {
 				path = "."
 			}
 			runScanInteractive(path)
-			fmt.Println("\n✅ Scan hoàn tất! Nhấn Enter để quay lại menu...")
+			fmt.Println("\n" + ui.GetSuccessBox("Quét hoàn tất. Nhấn Enter để quay lại menu."))
 			fmt.Scanln()
 		case "serve":
 			runServeInteractive()
@@ -244,21 +209,23 @@ func runInteractiveMenu() error {
 			runAISetupInteractive()
 		case "config":
 			runConfigInteractive()
-			fmt.Println("\nNhấn Enter để quay lại menu...")
+			fmt.Println("\n" + ui.GetInfoBox("Nhấn Enter để quay lại menu."))
 			fmt.Scanln()
 		case "install":
 			installGlobal()
-			fmt.Println("\nNhấn Enter để quay lại menu...")
+			fmt.Println("\n" + ui.GetInfoBox("Nhấn Enter để quay lại menu."))
 			fmt.Scanln()
 		case "help":
-			fmt.Println("\nVibeScanner - Công cụ khám bệnh codebase")
-			fmt.Println("\nCác lệnh có sẵn:")
-			fmt.Println("  vibescanner scan <path>    - Quét codebase")
-			fmt.Println("  vibescanner serve            - Mở web dashboard")
-			fmt.Println("  vibescanner ai-setup         - Cài đặt AI models")
-			fmt.Println("  vibescanner config           - Quản lý cấu hình")
-			fmt.Println("  vibescanner install          - Cài đặt global")
-			fmt.Println("\nNhấn Enter để quay lại menu...")
+			fmt.Println(ui.GetBorderedBox(strings.Join([]string{
+				ui.SectionLabel("Hướng dẫn nhanh"),
+				"",
+				"vibescanner scan <đường_dẫn>    Quét mã nguồn dự án",
+				"vibescanner serve               Mở bảng điều khiển web",
+				"vibescanner ai-setup            Thiết lập AI cục bộ",
+				"vibescanner config              Quản lý cấu hình",
+				"vibescanner install             Cài đặt toàn cục",
+			}, "\n"), "TRỢ GIÚP"))
+			fmt.Println("\n" + ui.GetInfoBox("Nhấn Enter để quay lại menu."))
 			fmt.Scanln()
 		}
 	}
@@ -266,7 +233,7 @@ func runInteractiveMenu() error {
 
 // runScanInteractive runs scan from interactive mode
 func runScanInteractive(path string) error {
-	fmt.Printf("\n🔍 Đang quét: %s\n", path)
+	fmt.Println("\n" + ui.GetInfoBox(fmt.Sprintf("Đang quét dự án: %s", path)))
 	// Call the actual scan logic
 	return performScan(path, "terminal", false)
 }
@@ -276,7 +243,7 @@ func runServeInteractive() error {
 	results, err := output.LoadLastScan()
 	if err != nil {
 		fmt.Println(ui.GetErrorBox("Không tìm thấy kết quả scan. Hãy chạy scan trước."))
-		fmt.Println("\nNhấn Enter để quay lại menu...")
+		fmt.Println("\n" + ui.GetInfoBox("Nhấn Enter để quay lại menu."))
 		fmt.Scanln()
 		return nil
 	}
@@ -288,7 +255,7 @@ func runServeInteractive() error {
 		fmt.Println(ui.GetSuccessBox("Dashboard đã dừng thành công"))
 	}
 	
-	fmt.Println("\nNhấn Enter để quay lại menu...")
+	fmt.Println("\n" + ui.GetInfoBox("Nhấn Enter để quay lại menu."))
 	fmt.Scanln()
 	return nil
 }

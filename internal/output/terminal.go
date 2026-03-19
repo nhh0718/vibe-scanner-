@@ -6,11 +6,13 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
+	"strings"
 	"time"
 
 	"github.com/fatih/color"
 	"github.com/nhh0718/vibe-scanner-/internal/aggregation"
 	"github.com/nhh0718/vibe-scanner-/internal/models"
+	"github.com/nhh0718/vibe-scanner-/internal/ui"
 )
 
 // PrintTerminal in kết quả ra terminal
@@ -24,29 +26,52 @@ func PrintTerminal(results *models.ScanResult) {
 
 // printHeader in header
 func printHeader(results *models.ScanResult) {
-	cyan := color.New(color.FgCyan, color.Bold)
-	_ = cyan
 	fmt.Println()
-	color.Cyan("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-	fmt.Println()
-	color.Cyan("  🔍 VibeScanner — Kết quả khám bệnh")
-	fmt.Printf("  Dự án: %s    Thời gian: %s\n", results.Project.Name, results.Duration.Round(time.Second))
-	fmt.Println()
-	color.Cyan("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+	var main strings.Builder
+	main.WriteString(ui.SectionLabel("Kết quả quét dự án"))
+	main.WriteString("\n\n")
+	main.WriteString(ui.KeyValue("Dự án", results.Project.Name))
+	main.WriteString("\n")
+	main.WriteString(ui.KeyValue("Đường dẫn", results.Project.Path))
+	main.WriteString("\n")
+	main.WriteString(ui.KeyValue("Thời gian quét", results.Duration.Round(time.Second).String()))
+
+	var side strings.Builder
+	side.WriteString(ui.SectionLabel("Tổng quan nhanh"))
+	side.WriteString("\n\n")
+	side.WriteString(ui.KeyValue("Tệp đã quét", fmt.Sprintf("%d", results.Project.FilesScanned)))
+	side.WriteString("\n")
+	side.WriteString(ui.KeyValue("Dòng mã", fmt.Sprintf("%d", results.Project.LinesOfCode)))
+	side.WriteString("\n")
+	side.WriteString(ui.KeyValue("Tổng lỗi", fmt.Sprintf("%d", results.Summary.Total)))
+
+	fmt.Println(ui.RenderScreen(
+		"BÁO CÁO QUÉT MÃ NGUỒN",
+		"Tổng hợp sức khỏe mã nguồn và các điểm cần ưu tiên xử lý",
+		main.String(),
+		side.String(),
+		[]string{"Chạy vibescanner serve để mở bảng điều khiển", "Dùng --report html để xuất báo cáo web"},
+	))
 	fmt.Println()
 }
 
 // printHealthScore in điểm sức khỏe
 func printHealthScore(score models.HealthScore) {
 	status, desc := aggregation.GetHealthStatus(score.Overall)
-
-	fmt.Printf("  🏥 ĐIỂM SỨC KHỎE TỔNG QUÁT: %d/100 %s\n", score.Overall, status)
-	fmt.Printf("     %s\n", desc)
-	fmt.Println()
-
-	fmt.Println("  ┌─────────────┬─────────┬──────────────────────────┐")
-	fmt.Println("  │ Hạng mục   │  Điểm  │ Tình trạng               │")
-	fmt.Println("  ├─────────────┼─────────┼──────────────────────────┤")
+	var main strings.Builder
+	main.WriteString(ui.SectionLabel(fmt.Sprintf("Điểm sức khỏe tổng quát: %d/100", score.Overall)))
+	main.WriteString("\n")
+	main.WriteString(ui.Muted(desc))
+	main.WriteString("\n\n")
+	main.WriteString(ui.KeyValue("Trạng thái", status))
+	main.WriteString("\n")
+	main.WriteString(ui.KeyValue("Bảo mật", fmt.Sprintf("%d/100", score.Security)))
+	main.WriteString("\n")
+	main.WriteString(ui.KeyValue("Chất lượng", fmt.Sprintf("%d/100", score.Quality)))
+	main.WriteString("\n")
+	main.WriteString(ui.KeyValue("Kiến trúc", fmt.Sprintf("%d/100", score.Architecture)))
+	main.WriteString("\n")
+	main.WriteString(ui.KeyValue("Hiệu năng", fmt.Sprintf("%d/100", score.Performance)))
 
 	categories := []struct {
 		name  string
@@ -59,18 +84,26 @@ func printHealthScore(score models.HealthScore) {
 		{"Hiệu năng", "🟢", score.Performance},
 	}
 
+	var side strings.Builder
+	side.WriteString(ui.SectionLabel("Phân loại theo hạng mục"))
+	side.WriteString("\n\n")
 	for _, cat := range categories {
-		status := getScoreStatus(cat.score)
-		fmt.Printf("  │ %s %-9s │ %3d/100 │ %-24s │\n", cat.emoji, cat.name, cat.score, status)
+		side.WriteString(fmt.Sprintf("%s %-10s %3d/100  %s\n", cat.emoji, cat.name, cat.score, getScoreStatus(cat.score)))
 	}
 
-	fmt.Println("  └─────────────┴─────────┴──────────────────────────┘")
+	fmt.Println(ui.RenderScreen(
+		"ĐIỂM SỨC KHỎE MÃ NGUỒN",
+		"Đánh giá nhanh theo từng nhóm chất lượng quan trọng",
+		main.String(),
+		strings.TrimSpace(side.String()),
+		[]string{"Ưu tiên xử lý mục có điểm thấp trước"},
+	))
 	fmt.Println()
 }
 
 // printSummary in tóm tắt findings
 func printSummary(summary models.ScanSummary) {
-	fmt.Printf("  PHÁT HIỆN: %s\n", formatSummary(summary))
+	fmt.Println(ui.GetInfoBox("Tóm tắt phát hiện: " + formatSummary(summary)))
 	fmt.Println()
 }
 
@@ -80,11 +113,7 @@ func printCriticalFindings(results *models.ScanResult) {
 	high := results.FindingsBySeverity(models.High)
 
 	if len(critical) > 0 {
-		red := color.New(color.FgRed, color.Bold)
-		fmt.Println()
-		red.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-		red.Println("  🚨 CRITICAL — Cần xử lý NGAY trước khi deploy")
-		red.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+		fmt.Println(ui.GetErrorBox("Mức CRITICAL: cần xử lý ngay trước khi triển khai"))
 		fmt.Println()
 
 		for i, f := range critical {
@@ -97,11 +126,7 @@ func printCriticalFindings(results *models.ScanResult) {
 	}
 
 	if len(high) > 0 {
-		yellow := color.New(color.FgYellow, color.Bold)
-		fmt.Println()
-		yellow.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-		yellow.Println("  ⚠️  HIGH — Nên xử lý trong tuần này")
-		yellow.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+		fmt.Println(ui.GetInfoBox("Mức HIGH: nên lên kế hoạch xử lý trong tuần này"))
 		fmt.Println()
 
 		for i, f := range high {
@@ -116,37 +141,38 @@ func printCriticalFindings(results *models.ScanResult) {
 
 // printFinding in một finding
 func printFinding(f models.Finding) {
-	cyan := color.New(color.FgCyan)
-	yellow := color.New(color.FgYellow)
-
-	fmt.Printf("  [%s] %s\n", f.ID, aggregation.GetSeverityLabel(f.Severity))
-	fmt.Printf("  File: %s\n", cyan.Sprintf("%s:%d", f.File, f.Line))
-	fmt.Println()
-	fmt.Printf("  %s\n\n", f.Message)
+	var body strings.Builder
+	body.WriteString(ui.KeyValue("Mã lỗi", f.ID))
+	body.WriteString("\n")
+	body.WriteString(ui.KeyValue("Mức độ", aggregation.GetSeverityLabel(f.Severity)))
+	body.WriteString("\n")
+	body.WriteString(ui.KeyValue("Vị trí", fmt.Sprintf("%s:%d", f.File, f.Line)))
+	body.WriteString("\n\n")
+	body.WriteString(f.Message)
 
 	if f.CodeSnippet != "" {
-		fmt.Println("  Code:")
+		body.WriteString("\n\n")
+		body.WriteString(ui.SectionLabel("Đoạn mã liên quan"))
+		body.WriteString("\n")
 		lines := splitLines(f.CodeSnippet, 5) // Max 5 lines
 		for _, line := range lines {
-			fmt.Printf("  %s %s\n", yellow.Sprintf("│"), line)
+			body.WriteString("  │ ")
+			body.WriteString(line)
+			body.WriteString("\n")
 		}
-		fmt.Println()
 	}
 
-	fmt.Println("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+	fmt.Println(ui.GetBorderedBox(strings.TrimSpace(body.String()), fmt.Sprintf("CHI TIẾT PHÁT HIỆN %s", f.ID)))
 	fmt.Println()
 }
 
 // printFooter in footer
 func printFooter(results *models.ScanResult) {
-	green := color.New(color.FgGreen)
 	fmt.Println()
-	green.Println("✅ Quét hoàn tất!")
-	fmt.Printf("📊 Tổng cộng: %d files được quét, %d issues phát hiện\n", 
-		results.Project.FilesScanned, results.Summary.Total)
+	fmt.Println(ui.GetSuccessBox(fmt.Sprintf("Quét hoàn tất: %d tệp, %d phát hiện", results.Project.FilesScanned, results.Summary.Total)))
 	fmt.Println()
-	fmt.Println("💡 Chạy với --report html để xem báo cáo chi tiết trong browser")
-	fmt.Println("💡 Chạy 'vibescanner serve' để mở dashboard")
+	fmt.Println(ui.GetInfoBox("Dùng --report html để mở báo cáo dạng web"))
+	fmt.Println(ui.GetInfoBox("Dùng vibescanner serve để xem bảng điều khiển"))
 	fmt.Println()
 }
 
@@ -257,21 +283,15 @@ func openBrowser(url string) error {
 
 // PrintSuccess prints a success message with checkmark
 func PrintSuccess(format string, args ...interface{}) {
-	green := color.New(color.FgGreen, color.Bold)
-	green.Printf("✅ ")
-	fmt.Printf(format+"\n", args...)
+	fmt.Println(ui.GetSuccessBox(fmt.Sprintf(format, args...)))
 }
 
 // PrintError prints an error message
 func PrintError(format string, args ...interface{}) {
-	red := color.New(color.FgRed, color.Bold)
-	red.Printf("❌ ")
-	fmt.Printf(format+"\n", args...)
+	fmt.Println(ui.GetErrorBox(fmt.Sprintf(format, args...)))
 }
 
 // PrintInfo prints an info message
 func PrintInfo(format string, args ...interface{}) {
-	blue := color.New(color.FgBlue)
-	blue.Printf("ℹ️  ")
-	fmt.Printf(format+"\n", args...)
+	fmt.Println(ui.GetInfoBox(fmt.Sprintf(format, args...)))
 }
