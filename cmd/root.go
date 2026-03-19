@@ -6,6 +6,9 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// version is set at build time via ldflags
+var version = "dev"
+
 var rootCmd = &cobra.Command{
 	Use:   "vibescanner",
 	Short: "🔍 Công cụ 'khám bệnh' codebase cho vibe coders",
@@ -13,7 +16,6 @@ var rootCmd = &cobra.Command{
 để phát hiện lỗi bảo mật, chất lượng code, và kiến trúc issues.
 
 Chạy hoàn toàn local, code không bao giờ rời máy.`,
-	Version: "0.1.0",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		// If no subcommand provided, show interactive menu
 		return runInteractiveMenu()
@@ -28,4 +30,5 @@ func Execute() {
 
 func init() {
 	rootCmd.CompletionOptions.DisableDefaultCmd = true
+	rootCmd.Version = version
 }

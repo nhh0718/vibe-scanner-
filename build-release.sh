@@ -2,9 +2,9 @@
 # Build script for VibeScanner release
 # Creates binaries for all platforms in v{VERSION} folder
 
-VERSION="0.2.0"
+VERSION="0.3.0"
 OUTDIR="v${VERSION}"
-LDFLAGS="-s -w -X main.version=${VERSION}"
+LDFLAGS="-s -w -X main.version=${VERSION} -X main.commit=$(git rev-parse --short HEAD) -X main.date=$(date +%Y-%m-%d)"
 
 echo "🔨 Building VibeScanner v${VERSION}..."
 echo ""

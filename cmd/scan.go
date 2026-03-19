@@ -61,6 +61,11 @@ func performScan(path, format string, autoOpen bool) error {
 		output.PrintTerminal(results)
 	}
 
+	// Save to cache for serve command
+	if err := output.SaveLastScan(results); err != nil {
+		fmt.Printf("⚠️  Không thể lưu cache: %v\n", err)
+	}
+
 	return nil
 }
 

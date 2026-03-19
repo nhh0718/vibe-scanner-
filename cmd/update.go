@@ -14,12 +14,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// These are set at build time via ldflags
-var (
-	version = "dev"
-	commit  = "unknown"
-	date    = "unknown"
-)
+// version, commit, date are set at build time via ldflags in root.go
 
 var updateCmd = &cobra.Command{
 	Use:   "update",

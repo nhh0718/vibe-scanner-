@@ -235,12 +235,6 @@ func WriteJSON(results *models.ScanResult) error {
 	return nil
 }
 
-// LoadLastScan load kết quả scan gần nhất từ file
-func LoadLastScan() (*models.ScanResult, error) {
-	// TODO: Implement loading from ~/.vibescanner/cache/
-	return nil, fmt.Errorf("chưa có kết quả scan nào được lưu")
-}
-
 // openBrowser mở browser với URL
 func openBrowser(url string) error {
 	var cmd string
