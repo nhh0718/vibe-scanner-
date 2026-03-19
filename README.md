@@ -2,237 +2,107 @@
 
 > Công cụ "khám bệnh" codebase cho vibe coders - Chạy hoàn toàn local, code không rời máy
 
-![Version](https://img.shields.io/badge/version-0.3.1-blue)
+![Version](https://img.shields.io/badge/version-0.3.2-blue)
 ![Go](https://img.shields.io/badge/Go-1.22+-00ADD8)
 ![Vue](https://img.shields.io/badge/Vue-3-4FC08D)
 
 ## ✨ Điểm khác biệt
 
-| Công cụ thông thường | VibeScanner |
-|---|---|
+| Công cụ thông thường       | VibeScanner                                                                                              |
+| -------------------------- | -------------------------------------------------------------------------------------------------------- |
 | `SQL injection at line 42` | `Dòng 42: Hacker có thể xóa toàn bộ database chỉ bằng cách gõ vào ô search. Sửa như này:` + code example |
-| Output cho developer | Output cho người vibe-code không biết security |
-| Chạy từng tool riêng lẻ | Một lệnh quét tất cả |
-| Kết quả thô, kỹ thuật | Báo cáo ngôn ngữ đời thường, có priority rõ ràng |
-| Gửi code lên cloud | **100%% local, code không rời máy** |
-
-## 🚀 Cài đặt
-
-### Tải binary (khuyến nghị)
-
-**macOS (Intel - older Macs):**
-```bash
-curl -L https://github.com/nhh0718/vibe-scanner-/releases/latest/download/vibescanner-darwin-amd64 -o vibescanner
-chmod +x vibescanner
-```
-
-**macOS (Apple Silicon - M1/M2/M3):**
-```bash
-curl -L https://github.com/nhh0718/vibe-scanner-/releases/latest/download/vibescanner-darwin-arm64 -o vibescanner
-chmod +x vibescanner
-```
-
-**Linux:**
-```bash
-curl -L https://github.com/nhh0718/vibe-scanner-/releases/latest/download/vibescanner-linux-amd64 -o vibescanner
-chmod +x vibescanner
-```
-
-**Windows (PowerShell):**
-```powershell
-Invoke-WebRequest -Uri https://github.com/nhh0718/vibe-scanner-/releases/latest/download/vibescanner-windows-amd64.exe -OutFile vibescanner.exe
-```
-
-> 📚 **Xem hướng dẫn chi tiết đầy đủ tại:** [`USAGE.md`](./USAGE.md) - Bao gồm cài đặt global, cách bypass Gatekeeper trên macOS, và troubleshooting.
-
-### Build từ source
-
-```bash
-git clone https://github.com/nhh0718/vibe-scanner-
-cd vibescanner
-go build -o vibescanner .
-```
-
-## 📖 Sử dụng
-
-### Quét codebase và xem kết quả trong terminal
-
-```bash
-./vibescanner scan ./my-project
-```
-
-### Tạo HTML report
-
-```bash
-./vibescanner scan ./my-project --report html --open
-```
-
-### Mở Web Dashboard
-
-```bash
-./vibescanner scan ./my-project --report html
-# Sau đó mở browser tại http://localhost:7420
-```
-
-### Cài đặt AI (tùy chọn)
-
-```bash
-./vibescanner ai-setup
-```
-
-Sau khi cài đặt AI, bạn có thể click "Hỏi bác sĩ AI" trên từng finding trong dashboard để nhận giải thích chi tiết bằng tiếng Việt.
-
-## 🏥 Điểm sức khỏe codebase
-
-VibeScanner đánh giá codebase theo 4 hạng mục:
-
-| Điểm | Trạng thái | Ý nghĩa |
-|---|---|---|
-| 80-100 | 🟢 Tốt | Có thể deploy, monitor regularly |
-| 60-79 | 🟡 Trung bình | Fix Critical/High trước khi scale |
-| 40-59 | 🟠 Cần cải thiện | Cần sprint fix issues |
-| 0-39 | 🔴 Nguy hiểm | Không nên deploy production |
-
-## 🔍 Các loại vấn đề được phát hiện
-
-### 🛡️ Bảo mật (Security)
-- SQL Injection, NoSQL Injection
-- XSS, CSRF
-- Hardcoded secrets, API keys
-- JWT weak secrets
-- Path traversal
-- CORS misconfiguration
-
-### ✨ Chất lượng (Quality)
-- Code complexity
-- Magic numbers
-- Console.log trong production
-- TODO/FIXME comments
-- Empty catch blocks
-- Long lines/functions
-
-### 🏗️ Kiến trúc (Architecture)
-- Circular dependencies
-- SOLID violations
-- Code duplication
-
-### 🔑 Secrets
-- API keys (AWS, Stripe, OpenAI, etc.)
-- Database passwords
-- Private keys
-- `.env` files committed
-
-## 🏗️ Kiến trúc
-
-```
-┌─────────────────────────────────────────────────────────┐
-│                     INPUT LAYER                         │
-│  Local folder  │  Git repo URL  │  File upload (ZIP)    │
-└────────────────────────┬────────────────────────────────┘
-                         │
-┌────────────────────────▼────────────────────────────────┐
-│                   INGESTION LAYER                       │
-│  • Language detection    • File tree traversal          │
-│  • Git history analysis  • Dependency extraction       │
-└────────────────────────┬────────────────────────────────┘
-         ┌───────────────┼───────────────┐
-         │               │               │
-┌────────▼───────┐ ┌─────▼─────┐ ┌─────▼──────────┐
-│ SECURITY       │ │  QUALITY  │ │  ARCHITECTURE  │
-│ ENGINE         │ │  ENGINE   │ │  ENGINE        │
-│                │ │           │ │                │
-│ • Semgrep      │ │ • Radon   │ │ • Madge        │
-│ • Gitleaks     │ │ • ESLint  │ │ • Dep-cruiser  │
-└────────┬───────┘ └─────┬─────┘ └─────┬──────────┘
-         │               │             │
-┌────────▼───────────────▼─────────────▼────────────────┐
-│                  AGGREGATION LAYER                    │
-│  • Deduplicate findings                               │
-│  • Score severity (Critical/High/Medium/Low)          │
-│  • Group by file/category/severity                    │
-└────────────────────────┬────────────────────────────────┘
-                         │
-┌────────────────────────▼────────────────────────────────┐
-│                    AI SYNTHESIS LAYER                 │
-│  Ollama (local) — Qwen2.5-Coder                      │
-│  • Giải thích lỗi bằng ngôn ngữ đơn giản            │
-│  • Đề xuất code fix cụ thể                          │
-│  • On-demand (không chạy ngầm)                     │
-└────────────────────────┬────────────────────────────────┘
-                         │
-┌────────────────────────▼────────────────────────────────┐
-│                   OUTPUT LAYER                          │
-│  CLI summary  │  HTML report  │  JSON  │  Dashboard     │
-└─────────────────────────────────────────────────────────┘
-```
-
-## 🛠️ Stack kỹ thuật
-
-### Core
-- **Language**: Go 1.22+
-- **CLI**: Cobra
-- **Web Server**: Gin
-- **Concurrency**: Goroutines
-
-### Dashboard
-- **Framework**: Vue 3 + Vite
-- **Styling**: Tailwind CSS
-- **State**: Pinia
-- **Charts**: Chart.js
-
-### AI Layer
-- **Runtime**: Ollama (local)
-- **Model**: Qwen2.5-Coder (3B/7B)
-- **Protocol**: REST API + SSE streaming
-
-## 📝 Lộ trình phát triển
-
-### ✅ Phase 0 - MVP CLI (Completed)
-- [x] Core CLI commands (scan, ai-setup, serve)
-- [x] Semgrep & Gitleaks integration
-- [x] Complexity analysis
-- [x] Terminal, JSON, HTML output
-
-### ✅ Phase 1 - Web Dashboard (Completed)
-- [x] Vue 3 + Vite setup
-- [x] Dashboard components
-- [x] Go embed integration
-- [x] Custom Semgrep rules
-
-### 🚧 Phase 2 - CI/CD & Extensions (In Progress)
-- [ ] VS Code extension
-- [ ] GitHub Action
-- [ ] Pre-commit hook
-- [ ] Baseline support
-
-### 📋 Phase 3 - Monetization
-- [ ] Pro tier features
-- [ ] Team dashboard
-- [ ] Custom rules builder
-
-## 🤝 Đóng góp
-
-Chúng tôi rất hoan nghênh đóng góp! Vui lòng:
-
-1. Fork repository
-2. Tạo feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit changes (`git commit -m 'Add amazing feature'`)
-4. Push to branch (`git push origin feature/amazing-feature`)
-5. Mở Pull Request
-
-## 📄 License
-
-MIT License - Xem [LICENSE](LICENSE) để biết thêm chi tiết.
-
-## 🙏 Acknowledgements
-
-- [Semgrep](https://semgrep.dev/) - Static analysis engine
-- [Gitleaks](https://github.com/gitleaks/gitleaks) - Secret detection
-- [Ollama](https://ollama.ai/) - Local LLM runtime
-- [Vue.js](https://vuejs.org/) - Frontend framework
+| Output cho developer       | Output cho người vibe-code không biết security                                                           |
+| Chạy từng tool riêng lẻ    | Một lệnh quét tất cả                                                                                     |
+| Kết quả thô, kỹ thuật      | Báo cáo ngôn ngữ đời thường, có priority rõ ràng                                                         |
+| Gửi code lên cloud         | **100% local, code không rời máy**                                                                       |
 
 ---
 
-<p align="center">
-  Made with ❤️ for vibe coders everywhere
-</p>
+## 🚀 Quick Start
+
+### 1. Cài đặt
+
+**Windows (PowerShell Admin):**
+
+```powershell
+Invoke-WebRequest -Uri https://github.com/nhh0718/vibe-scanner-/releases/latest/download/vibescanner-windows-amd64.exe -OutFile vibescanner.exe
+.\vibescanner.exe install
+```
+
+**macOS Intel:**
+
+```bash
+curl -L https://github.com/nhh0718/vibe-scanner-/releases/latest/download/vibescanner-darwin-amd64 -o vibescanner
+chmod +x vibescanner
+sudo mv vibescanner /usr/local/bin/
+```
+
+**macOS Apple Silicon (M1/M2/M3):**
+
+```bash
+curl -L https://github.com/nhh0718/vibe-scanner-/releases/latest/download/vibescanner-darwin-arm64 -o vibescanner
+chmod +x vibescanner
+sudo mv vibescanner /usr/local/bin/
+# Nếu bị chặn: System Preferences → Security & Privacy → Open Anyway
+```
+
+**Linux:**
+
+```bash
+curl -L https://github.com/nhh0718/vibe-scanner-/releases/latest/download/vibescanner-linux-amd64 -o vibescanner
+chmod +x vibescanner
+sudo mv vibescanner /usr/local/bin/
+```
+
+### 2. Sử dụng cơ bản
+
+```bash
+vibescanner                          # Menu tương tác
+vibescanner scan ./my-project        # Quét trực tiếp
+vibescanner scan . --report html     # Tạo HTML report
+vibescanner serve                    # Mở dashboard
+```
+
+---
+
+## 📋 Tất cả lệnh
+
+| Lệnh          | Mô tả          | Ví dụ                     |
+| ------------- | -------------- | ------------------------- |
+| `vibescanner` | Menu tương tác | `vibescanner`             |
+| `scan [path]` | Quét codebase  | `vibescanner scan .`      |
+| `serve`       | Mở dashboard   | `vibescanner serve`       |
+| `ai-setup`    | Quản lý AI     | `vibescanner ai-setup`    |
+| `config`      | Cấu hình       | `vibescanner config list` |
+| `install`     | Cài global     | `vibescanner install`     |
+| `uninstall`   | Gỡ global      | `vibescanner uninstall`   |
+| `update`      | Cập nhật       | `vibescanner update`      |
+
+---
+
+## 🤖 AI Setup (Tùy chọn)
+
+```bash
+vibescanner ai-setup        # Menu AI tương tác
+vibescanner ai-setup status # Kiểm tra trạng thái
+vibescanner ai-setup install # Cài model mặc định
+```
+
+---
+
+## 🔧 Troubleshooting
+
+| Lỗi                                 | Giải pháp                                             |
+| ----------------------------------- | ----------------------------------------------------- |
+| "vibescanner không phải là lệnh..." | Chạy `vibescanner install` và restart terminal        |
+| macOS: "cannot be opened"           | System Preferences → Security & Privacy → Open Anyway |
+| "Không tìm thấy kết quả scan"       | Chạy `vibescanner scan .` trước khi `serve`           |
+| AI không khả dụng                   | Cài Ollama tại https://ollama.ai/download             |
+
+---
+
+## 📄 License
+
+MIT License
+
+<p align="center">Made with ❤️ for vibe coders everywhere</p>
