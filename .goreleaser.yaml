@@ -46,7 +46,7 @@ archives:
       - README.md
 
 checksum:
-  name_template: 'checksums.txt'
+  name_template: "checksums.txt"
 
 snapshot:
   name_template: "{{ incpatch .Version }}-next"
@@ -55,25 +55,25 @@ changelog:
   sort: asc
   filters:
     exclude:
-      - '^docs:'
-      - '^test:'
-      - '^chore:'
+      - "^docs:"
+      - "^test:"
+      - "^chore:"
 
 release:
   github:
-    owner: vibescanner
-    name: vibescanner
+    owner: nhh0718
+    name: vibe-scanner-
   draft: true
   prerelease: auto
 
 # Homebrew tap
 brews:
   - name: vibescanner
-    homepage: https://github.com/vibescanner/vibescanner
+    homepage: https://github.com/nhh0718/vibe-scanner-
     description: "🔍 Code health scanner for vibe coders"
     license: "MIT"
     repository:
-      owner: vibescanner
+      owner: nhh0718
       name: homebrew-tap
     commit_author:
       name: goreleaserbot
