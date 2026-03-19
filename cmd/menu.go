@@ -8,6 +8,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/spf13/cobra"
+	"github.com/vibescanner/vibescanner/internal/output"
 )
 
 var (
@@ -220,14 +221,20 @@ func runScanInteractive(path string) error {
 // runServeInteractive runs serve from interactive mode
 func runServeInteractive() error {
 	fmt.Println("\n🌐 Khởi động dashboard...")
-	// Import here to avoid cycle
-	return nil
+	// Call actual serve logic
+	results, err := output.LoadLastScan()
+	if err != nil {
+		return fmt.Errorf("không tìm thấy kết quả scan trước đó: %w", err)
+	}
+	fmt.Println("📂 Mở dashboard tại http://localhost:7420")
+	return output.ServeDashboard(results, 7420)
 }
 
 // runAISetupInteractive runs ai-setup from interactive mode
 func runAISetupInteractive() error {
 	fmt.Println("\n🤖 AI Setup...")
-	return nil
+	// Call actual ai-setup status
+	return runAIStatus()
 }
 
 // runConfigInteractive runs config from interactive mode
