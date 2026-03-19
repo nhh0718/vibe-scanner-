@@ -25,16 +25,7 @@ func ServeDashboard(results *models.ScanResult, port int) error {
 		return fmt.Errorf("không thể tạo sub filesystem: %w", err)
 	}
 
-	// Serve static files with proper priority
-	staticServer := http.FileServer(http.FS(staticFS))
-	r.GET("/", func(c *gin.Context) {
-		staticServer.ServeHTTP(c.Writer, c.Request)
-	})
-	r.GET("/*filepath", func(c *gin.Context) {
-		staticServer.ServeHTTP(c.Writer, c.Request)
-	})
-
-	// API endpoints - after static routes
+	// API endpoints first
 	api := r.Group("/api")
 	{
 		api.GET("/scan", func(c *gin.Context) {
@@ -84,6 +75,12 @@ func ServeDashboard(results *models.ScanResult, port int) error {
 			})
 		})
 	}
+
+	// Serve static files for all other routes (SPA fallback)
+	staticServer := http.FileServer(http.FS(staticFS))
+	r.NoRoute(func(c *gin.Context) {
+		staticServer.ServeHTTP(c.Writer, c.Request)
+	})
 
 	addr := fmt.Sprintf("localhost:%d", port)
 	fmt.Printf("🌐 Dashboard running at http://%s\n", addr)
