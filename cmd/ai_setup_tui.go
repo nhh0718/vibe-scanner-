@@ -32,37 +32,37 @@ type AISetupModel struct {
 }
 
 var (
-	titleStyle = lipgloss.NewStyle().
+	aiTitleStyle = lipgloss.NewStyle().
 		Bold(true).
 		Foreground(lipgloss.Color("#60A5FA")).
 		MarginBottom(1)
 
-	menuStyle = lipgloss.NewStyle().
+	aiMenuStyle = lipgloss.NewStyle().
 		PaddingLeft(2)
 
-	selectedStyle = lipgloss.NewStyle().
+	aiSelectedStyle = lipgloss.NewStyle().
 		Foreground(lipgloss.Color("#60A5FA")).
 		Bold(true)
 
-	normalStyle = lipgloss.NewStyle().
+	aiNormalStyle = lipgloss.NewStyle().
 		Foreground(lipgloss.Color("#94A3B8"))
 
-	descStyle = lipgloss.NewStyle().
+	aiDescStyle = lipgloss.NewStyle().
 		Foreground(lipgloss.Color("#64748B")).
 		PaddingLeft(4)
 
-	statusGood = lipgloss.NewStyle().
+	aiStatusGood = lipgloss.NewStyle().
 		Foreground(lipgloss.Color("#22C55E")).
 		Bold(true)
 
-	statusBad = lipgloss.NewStyle().
+	aiStatusBad = lipgloss.NewStyle().
 		Foreground(lipgloss.Color("#EF4444")).
 		Bold(true)
 
-	infoStyle = lipgloss.NewStyle().
+	aiInfoStyle = lipgloss.NewStyle().
 		Foreground(lipgloss.Color("#3B82F6"))
 
-	helpStyle = lipgloss.NewStyle().
+	aiHelpStyle = lipgloss.NewStyle().
 		Foreground(lipgloss.Color("#64748B")).
 		MarginTop(1)
 )
@@ -227,24 +227,24 @@ func (m AISetupModel) View() string {
 func (m AISetupModel) menuView() string {
 	var b strings.Builder
 
-	b.WriteString(titleStyle.Render("🤖 VibeScanner AI Setup"))
+	b.WriteString(aiTitleStyle.Render("🤖 VibeScanner AI Setup"))
 	b.WriteString("\n")
 
 	for i, item := range m.menuItems {
 		if m.cursor == i {
-			b.WriteString(selectedStyle.Render("▸ " + item.title))
+			b.WriteString(aiSelectedStyle.Render("▸ " + item.title))
 		} else {
-			b.WriteString(normalStyle.Render("  " + item.title))
+			b.WriteString(aiNormalStyle.Render("  " + item.title))
 		}
 		if item.desc != "" {
 			b.WriteString("\n")
-			b.WriteString(descStyle.Render(item.desc))
+			b.WriteString(aiDescStyle.Render(item.desc))
 		}
 		b.WriteString("\n")
 	}
 
 	b.WriteString("\n")
-	b.WriteString(helpStyle.Render("↑/↓: di chuyển • enter: chọn • q: thoát"))
+	b.WriteString(aiHelpStyle.Render("↑/↓: di chuyển • enter: chọn • q: thoát"))
 
 	return b.String()
 }
@@ -252,15 +252,15 @@ func (m AISetupModel) menuView() string {
 func (m AISetupModel) statusView() string {
 	var b strings.Builder
 
-	b.WriteString(titleStyle.Render("📊 Trạng thái hệ thống"))
+	b.WriteString(aiTitleStyle.Render("📊 Trạng thái hệ thống"))
 	b.WriteString("\n\n")
 
 	if m.status == "running" {
-		b.WriteString(statusGood.Render("✅ Ollama đang chạy"))
+		b.WriteString(aiStatusGood.Render("✅ Ollama đang chạy"))
 		b.WriteString("\n\n")
 
 		if len(m.models) > 0 {
-			b.WriteString(infoStyle.Render("📦 Models đã cài đặt:"))
+			b.WriteString(aiInfoStyle.Render("📦 Models đã cài đặt:"))
 			b.WriteString("\n")
 			for _, model := range m.models {
 				b.WriteString(fmt.Sprintf("  • %s\n", model))
@@ -269,7 +269,7 @@ func (m AISetupModel) statusView() string {
 			b.WriteString("⚠️ Chưa có model nào được cài đặt\n")
 		}
 	} else {
-		b.WriteString(statusBad.Render("❌ Ollama chưa chạy"))
+		b.WriteString(aiStatusBad.Render("❌ Ollama chưa chạy"))
 		b.WriteString("\n\n")
 		b.WriteString("📥 Cài đặt Ollama:\n")
 		b.WriteString("   1. Truy cập: https://ollama.ai/download\n")
@@ -278,7 +278,7 @@ func (m AISetupModel) statusView() string {
 	}
 
 	b.WriteString("\n")
-	b.WriteString(helpStyle.Render("b: quay lại • q: thoát"))
+	b.WriteString(aiHelpStyle.Render("b: quay lại • q: thoát"))
 
 	return b.String()
 }
@@ -286,11 +286,11 @@ func (m AISetupModel) statusView() string {
 func (m AISetupModel) listView() string {
 	var b strings.Builder
 
-	b.WriteString(titleStyle.Render("📦 Danh sách models"))
+	b.WriteString(aiTitleStyle.Render("📦 Danh sách models"))
 	b.WriteString("\n\n")
 
 	if m.err != nil {
-		b.WriteString(statusBad.Render(fmt.Sprintf("❌ %v", m.err)))
+		b.WriteString(aiStatusBad.Render(fmt.Sprintf("❌ %v", m.err)))
 	} else if len(m.models) == 0 {
 		b.WriteString("📭 Chưa có model nào được cài đặt.\n")
 		b.WriteString("\nChạy 'Cài đặt model' để tải model đầu tiên.")
@@ -302,7 +302,7 @@ func (m AISetupModel) listView() string {
 	}
 
 	b.WriteString("\n")
-	b.WriteString(helpStyle.Render("b: quay lại • q: thoát"))
+	b.WriteString(aiHelpStyle.Render("b: quay lại • q: thoát"))
 
 	return b.String()
 }
@@ -310,11 +310,11 @@ func (m AISetupModel) listView() string {
 func (m AISetupModel) installView() string {
 	var b strings.Builder
 
-	b.WriteString(titleStyle.Render("⬇️  Cài đặt model"))
+	b.WriteString(aiTitleStyle.Render("⬇️  Cài đặt model"))
 	b.WriteString("\n\n")
 
 	if m.err != nil {
-		b.WriteString(statusBad.Render(fmt.Sprintf("❌ %v", m.err)))
+		b.WriteString(aiStatusBad.Render(fmt.Sprintf("❌ %v", m.err)))
 		b.WriteString("\n")
 	} else {
 		b.WriteString(m.spinner.View())
@@ -324,7 +324,7 @@ func (m AISetupModel) installView() string {
 	}
 
 	b.WriteString("\n")
-	b.WriteString(helpStyle.Render("b: quay lại • q: thoát"))
+	b.WriteString(aiHelpStyle.Render("b: quay lại • q: thoát"))
 
 	return b.String()
 }
@@ -332,25 +332,25 @@ func (m AISetupModel) installView() string {
 func (m AISetupModel) removeView() string {
 	var b strings.Builder
 
-	b.WriteString(titleStyle.Render("🗑️  Gỡ bỏ model"))
+	b.WriteString(aiTitleStyle.Render("🗑️  Gỡ bỏ model"))
 	b.WriteString("\n\n")
 
 	if m.err != nil {
-		b.WriteString(statusBad.Render(fmt.Sprintf("❌ %v", m.err)))
+		b.WriteString(aiStatusBad.Render(fmt.Sprintf("❌ %v", m.err)))
 	} else {
 		b.WriteString("Chọn model để gỡ bỏ:\n\n")
 		for i, model := range m.models {
 			if m.cursor == i {
-				b.WriteString(selectedStyle.Render(fmt.Sprintf("▸ %d. %s", i+1, model)))
+				b.WriteString(aiSelectedStyle.Render(fmt.Sprintf("▸ %d. %s", i+1, model)))
 			} else {
-				b.WriteString(normalStyle.Render(fmt.Sprintf("  %d. %s", i+1, model)))
+				b.WriteString(aiNormalStyle.Render(fmt.Sprintf("  %d. %s", i+1, model)))
 			}
 			b.WriteString("\n")
 		}
 	}
 
 	b.WriteString("\n")
-	b.WriteString(helpStyle.Render("↑/↓: chọn • enter: gỡ • b: quay lại • q: thoát"))
+	b.WriteString(aiHelpStyle.Render("↑/↓: chọn • enter: gỡ • b: quay lại • q: thoát"))
 
 	return b.String()
 }
