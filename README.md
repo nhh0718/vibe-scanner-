@@ -2,7 +2,7 @@
 
 > Công cụ "khám bệnh" codebase cho vibe coders - Chạy hoàn toàn local, code không rời máy
 
-![Version](https://img.shields.io/badge/version-0.3.2-blue)
+![Version](https://img.shields.io/badge/version-0.5.0-blue)
 ![Go](https://img.shields.io/badge/Go-1.22+-00ADD8)
 ![Vue](https://img.shields.io/badge/Vue-3-4FC08D)
 
