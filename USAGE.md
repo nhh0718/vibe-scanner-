@@ -2,6 +2,8 @@
 
 > Hướng dẫn từ A-Z để sử dụng VibeScanner - Công cụ "khám bệnh" codebase cho vibe coders
 
+> 📚 **Xem tổng quan dự án tại:** [`README.md`](./README.md)
+
 ---
 
 ## 📋 Mục lục
@@ -25,21 +27,45 @@
 #### Windows (PowerShell):
 ```powershell
 # Tải về
-Invoke-WebRequest -Uri https://github.com/vibescanner/vibescanner/releases/latest/download/vibescanner-windows-amd64.exe -OutFile vibescanner.exe
+Invoke-WebRequest -Uri https://github.com/nhh0718/vibe-scanner-/releases/latest/download/vibescanner-windows-amd64.exe -OutFile vibescanner.exe
 
 # Hoặc dùng curl
-curl -L -o vibescanner.exe https://github.com/vibescanner/vibescanner/releases/latest/download/vibescanner-windows-amd64.exe
+curl -L -o vibescanner.exe https://github.com/nhh0718/vibe-scanner-/releases/latest/download/vibescanner-windows-amd64.exe
 ```
 
-#### macOS:
+#### macOS (Intel - older Macs):
 ```bash
-curl -L https://github.com/vibescanner/vibescanner/releases/latest/download/vibescanner-darwin-amd64 -o vibescanner
+# Download for Intel Macs
+curl -L https://github.com/nhh0718/vibe-scanner-/releases/latest/download/vibescanner-darwin-amd64 -o vibescanner
 chmod +x vibescanner
 ```
 
+#### macOS (Apple Silicon - M1/M2/M3):
+```bash
+# Download for Apple Silicon (M1/M2/M3)
+curl -L https://github.com/nhh0718/vibe-scanner-/releases/latest/download/vibescanner-darwin-arm64 -o vibescanner
+chmod +x vibescanner
+```
+
+> ⚠️ **Lưu ý về Gatekeeper trên macOS:**
+> Khi chạy lần đầu, macOS có thể báo:
+> > "vibescanner cannot be opened because the developer cannot be verified"
+>
+> **Cách khắc phục:**
+> 1. Vào **System Settings** → **Privacy & Security**
+> 2. Kéo xuống phần **Security**, tìm thông báo về vibescanner
+> 3. Click **"Allow Anyway"**
+> 4. Chạy lại: `./vibescanner --version`
+>
+> Hoặc dùng terminal:
+> ```bash
+> xattr -cr ./vibescanner
+> ./vibescanner --version
+> ```
+
 #### Linux:
 ```bash
-curl -L https://github.com/vibescanner/vibescanner/releases/latest/download/vibescanner-linux-amd64 -o vibescanner
+curl -L https://github.com/nhh0718/vibe-scanner-/releases/latest/download/vibescanner-linux-amd64 -o vibescanner
 chmod +x vibescanner
 ```
 
@@ -49,7 +75,7 @@ Yêu cầu: Go 1.22+, Node.js 18+
 
 ```bash
 # Clone repo
-git clone https://github.com/vibescanner/vibescanner.git
+git clone https://github.com/nhh0718/vibe-scanner-.git
 cd vibescanner
 
 # Build web dashboard

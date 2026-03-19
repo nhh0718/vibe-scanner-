@@ -20,19 +20,35 @@
 
 ### Tải binary (khuyến nghị)
 
+**macOS (Intel - older Macs):**
 ```bash
-# macOS / Linux
-curl -L https://github.com/vibescanner/vibescanner/releases/latest/download/vibescanner-linux-amd64 -o vibescanner
+curl -L https://github.com/nhh0718/vibe-scanner-/releases/latest/download/vibescanner-darwin-amd64 -o vibescanner
 chmod +x vibescanner
-
-# Windows (PowerShell)
-Invoke-WebRequest -Uri https://github.com/vibescanner/vibescanner/releases/latest/download/vibescanner-windows-amd64.exe -OutFile vibescanner.exe
 ```
+
+**macOS (Apple Silicon - M1/M2/M3):**
+```bash
+curl -L https://github.com/nhh0718/vibe-scanner-/releases/latest/download/vibescanner-darwin-arm64 -o vibescanner
+chmod +x vibescanner
+```
+
+**Linux:**
+```bash
+curl -L https://github.com/nhh0718/vibe-scanner-/releases/latest/download/vibescanner-linux-amd64 -o vibescanner
+chmod +x vibescanner
+```
+
+**Windows (PowerShell):**
+```powershell
+Invoke-WebRequest -Uri https://github.com/nhh0718/vibe-scanner-/releases/latest/download/vibescanner-windows-amd64.exe -OutFile vibescanner.exe
+```
+
+> 📚 **Xem hướng dẫn chi tiết đầy đủ tại:** [`USAGE.md`](./USAGE.md) - Bao gồm cài đặt global, cách bypass Gatekeeper trên macOS, và troubleshooting.
 
 ### Build từ source
 
 ```bash
-git clone https://github.com/vibescanner/vibescanner
+git clone https://github.com/nhh0718/vibe-scanner-
 cd vibescanner
 go build -o vibescanner .
 ```
