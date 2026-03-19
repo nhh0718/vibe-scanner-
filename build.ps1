@@ -1,7 +1,7 @@
 ﻿# Build script for VibeScanner on Windows
 # Run: .\build.ps1
 
-$VERSION = "0.3.5"
+$VERSION = "0.4.0"
 $OUTDIR = "v$VERSION"
 $COMMIT = git rev-parse --short HEAD
 $DATE = Get-Date -Format "yyyy-MM-dd"

@@ -3,12 +3,13 @@ package cmd
 import (
 	"fmt"
 	"io"
+	"runtime"
 
 	"github.com/charmbracelet/bubbles/list"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	"github.com/spf13/cobra"
 	"github.com/nhh0718/vibe-scanner-/internal/output"
+	"github.com/spf13/cobra"
 )
 
 var (
@@ -108,8 +109,15 @@ func (m model) View() string {
 		return "👋 Tạm biệt!\n"
 	}
 
-	header := titleStyle.Render("🔍 VibeScanner - Chào mừng!")
-	header += "\n" + lipgloss.NewStyle().Foreground(lipgloss.Color("#64748b")).Render("Công cụ khám bệnh codebase cho vibe coders") + "\n\n"
+	// Header with OS and version info
+	osName := getOSName()
+	ver := version
+	if ver == "" {
+		ver = "dev"
+	}
+
+	header := titleStyle.Render("🔍 VibeScanner")
+	header += "\n" + lipgloss.NewStyle().Foreground(lipgloss.Color("#64748b")).Render(fmt.Sprintf("v%s • %s • Công cụ khám bệnh codebase", ver, osName)) + "\n\n"
 
 	footer := "\n" + lipgloss.NewStyle().Foreground(lipgloss.Color("#64748b")).Render("q/esc: thoát • enter: chọn • ↑↓: di chuyển")
 
@@ -127,56 +135,61 @@ var interactiveCmd = &cobra.Command{
 }
 
 func runInteractiveMenu() error {
-	items := []list.Item{
-		MenuItem{
-			Title:       "🔍 Scan Project",
-			Description: "Quét codebase để tìm lỗi bảo mật và chất lượng",
-			Command:     "scan",
-		},
-		MenuItem{
-			Title:       "🌐 Web Dashboard",
-			Description: "Mở dashboard trong browser",
-			Command:     "serve",
-		},
-		MenuItem{
-			Title:       "🤖 AI Setup",
-			Description: "Cài đặt và quản lý AI models",
-			Command:     "ai-setup",
-		},
-		MenuItem{
-			Title:       "⚙️  Cấu hình",
-			Description: "Xem và chỉnh sửa cấu hình",
-			Command:     "config",
-		},
-		MenuItem{
-			Title:       "📦 Cài đặt Global",
-			Description: "Thêm VibeScanner vào PATH",
-			Command:     "install",
-		},
-		MenuItem{
-			Title:       "❓ Help",
-			Description: "Xem hướng dẫn sử dụng",
-			Command:     "help",
-		},
-	}
+	for {
+		items := []list.Item{
+			MenuItem{
+				Title:       "🔍 Scan Project",
+				Description: "Quét codebase để tìm lỗi bảo mật và chất lượng",
+				Command:     "scan",
+			},
+			MenuItem{
+				Title:       "🌐 Web Dashboard",
+				Description: "Mở dashboard trong browser",
+				Command:     "serve",
+			},
+			MenuItem{
+				Title:       "🤖 AI Setup",
+				Description: "Cài đặt và quản lý AI models",
+				Command:     "ai-setup",
+			},
+			MenuItem{
+				Title:       "⚙️  Cấu hình",
+				Description: "Xem và chỉnh sửa cấu hình",
+				Command:     "config",
+			},
+			MenuItem{
+				Title:       "📦 Cài đặt Global",
+				Description: "Thêm VibeScanner vào PATH",
+				Command:     "install",
+			},
+			MenuItem{
+				Title:       "❓ Help",
+				Description: "Xem hướng dẫn sử dụng",
+				Command:     "help",
+			},
+		}
 
-	l := list.New(items, menuDelegate{}, 60, 14)
-	l.Title = ""
-	l.SetShowStatusBar(false)
-	l.SetFilteringEnabled(false)
-	l.SetShowHelp(false)
-	l.SetShowPagination(false)
+		l := list.New(items, menuDelegate{}, 60, 14)
+		l.Title = ""
+		l.SetShowStatusBar(false)
+		l.SetFilteringEnabled(false)
+		l.SetShowHelp(false)
+		l.SetShowPagination(false)
 
-	m := model{list: l}
-	p := tea.NewProgram(m)
-	finalModel, err := p.Run()
-	if err != nil {
-		return err
-	}
+		m := model{list: l}
+		p := tea.NewProgram(m)
+		finalModel, err := p.Run()
+		if err != nil {
+			return err
+		}
 
-	m = finalModel.(model)
-	if m.choice != "" {
-		// Execute the chosen command by calling functions directly
+		m = finalModel.(model)
+		if m.choice == "" {
+			// User pressed q/esc - exit
+			return nil
+		}
+
+		// Execute the chosen command
 		switch m.choice {
 		case "scan":
 			fmt.Println("\n📁 Kéo thả thư mục project vào đây hoặc nhập đường dẫn:")
@@ -186,29 +199,33 @@ func runInteractiveMenu() error {
 			if path == "" {
 				path = "."
 			}
-			// Call scan directly instead of scanCmd.Run
-			return runScanInteractive(path)
+			runScanInteractive(path)
+			fmt.Println("\n✅ Scan hoàn tất! Nhấn Enter để quay lại menu...")
+			fmt.Scanln()
 		case "serve":
-			return runServeInteractive()
+			runServeInteractive()
 		case "ai-setup":
-			return runAISetupInteractive()
+			runAISetupInteractive()
 		case "config":
-			return runConfigInteractive()
+			runConfigInteractive()
+			fmt.Println("\nNhấn Enter để quay lại menu...")
+			fmt.Scanln()
 		case "install":
-			return installGlobal()
+			installGlobal()
+			fmt.Println("\nNhấn Enter để quay lại menu...")
+			fmt.Scanln()
 		case "help":
-			fmt.Println("VibeScanner - Công cụ khám bệnh codebase")
+			fmt.Println("\nVibeScanner - Công cụ khám bệnh codebase")
 			fmt.Println("\nCác lệnh có sẵn:")
 			fmt.Println("  vibescanner scan <path>    - Quét codebase")
 			fmt.Println("  vibescanner serve            - Mở web dashboard")
 			fmt.Println("  vibescanner ai-setup         - Cài đặt AI models")
 			fmt.Println("  vibescanner config           - Quản lý cấu hình")
 			fmt.Println("  vibescanner install          - Cài đặt global")
-			return nil
+			fmt.Println("\nNhấn Enter để quay lại menu...")
+			fmt.Scanln()
 		}
 	}
-
-	return nil
 }
 
 // runScanInteractive runs scan from interactive mode
@@ -221,7 +238,6 @@ func runScanInteractive(path string) error {
 // runServeInteractive runs serve from interactive mode
 func runServeInteractive() error {
 	fmt.Println("\n🌐 Khởi động dashboard...")
-	// Call actual serve logic
 	results, err := output.LoadLastScan()
 	if err != nil {
 		return fmt.Errorf("không tìm thấy kết quả scan trước đó: %w", err)
@@ -230,14 +246,21 @@ func runServeInteractive() error {
 	return output.ServeDashboard(results, 7420)
 }
 
-// runAISetupInteractive runs ai-setup from interactive mode
-func runAISetupInteractive() error {
-	fmt.Println("\n🤖 AI Setup...")
-	// Call actual ai-setup status
-	return runAIStatus()
-}
-
 // runConfigInteractive runs config from interactive mode
 func runConfigInteractive() error {
 	return runConfigList()
+}
+
+// getOSName returns a friendly OS name
+func getOSName() string {
+	switch runtime.GOOS {
+	case "windows":
+		return "Windows"
+	case "darwin":
+		return "macOS"
+	case "linux":
+		return "Linux"
+	default:
+		return runtime.GOOS
+	}
 }

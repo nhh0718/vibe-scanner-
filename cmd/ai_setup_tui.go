@@ -2,6 +2,8 @@ package cmd
 
 import (
 	"fmt"
+	"os/exec"
+	"runtime"
 	"strings"
 
 	"github.com/charmbracelet/bubbles/spinner"
@@ -72,17 +74,30 @@ func initialAISetupModel() AISetupModel {
 	s.Spinner = spinner.Dot
 	s.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("#60A5FA"))
 
+	menuItems := []aiMenuItem{
+		{title: "📊 Trạng thái hệ thống", desc: "Kiểm tra Ollama và models"},
+		{title: "📦 Danh sách models", desc: "Xem models đã cài đặt"},
+		{title: "⬇️  Cài đặt model", desc: "Tải và cài đặt model mới"},
+		{title: "🗑️  Gỡ bỏ model", desc: "Xóa model không dùng"},
+	}
+
+	// Check if Ollama is installed
+	if !ai.IsOllamaAvailable() {
+		menuItems = []aiMenuItem{
+			{title: "⚠️  Ollama chưa cài đặt", desc: "Ollama là công cụ chạy AI local"},
+			{title: "📥 Tải Ollama tự động", desc: "Download và cài đặt Ollama cho hệ điều hành hiện tại"},
+			{title: "🌐 Mở trang download", desc: "Mở https://ollama.ai/download trong browser"},
+			{title: "🔙 Quay lại menu chính", desc: ""},
+		}
+	} else {
+		menuItems = append(menuItems, aiMenuItem{title: "🔙 Quay lại menu chính", desc: ""})
+	}
+
 	return AISetupModel{
-		state:   "menu",
-		spinner: s,
-		menuItems: []aiMenuItem{
-			{title: "📊 Trạng thái hệ thống", desc: "Kiểm tra Ollama và models"},
-			{title: "📦 Danh sách models", desc: "Xem models đã cài đặt"},
-			{title: "⬇️  Cài đặt model", desc: "Tải và cài đặt model mới"},
-			{title: "🗑️  Gỡ bỏ model", desc: "Xóa model không dùng"},
-			{title: "❌ Thoát", desc: ""},
-		},
-		selected: make(map[int]struct{}),
+		state:     "menu",
+		spinner:   s,
+		menuItems: menuItems,
+		selected:  make(map[int]struct{}),
 	}
 }
 
@@ -97,7 +112,18 @@ func (m AISetupModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
-		case "q", "esc", "ctrl+c":
+		case "q", "esc":
+			if m.state == "menu" {
+				return m, tea.Quit
+			}
+			// Go back to menu from any state
+			m.state = "menu"
+			m.err = nil
+			m.message = ""
+			m = initialAISetupModel()
+			return m, nil
+
+		case "ctrl+c":
 			return m, tea.Quit
 
 		case "up", "k":
@@ -115,9 +141,7 @@ func (m AISetupModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		case "b":
 			if m.state != "menu" {
-				m.state = "menu"
-				m.err = nil
-				m.message = ""
+				m = initialAISetupModel()
 			}
 		}
 
@@ -139,57 +163,61 @@ func (m AISetupModel) handleSelection() (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 
-	switch m.cursor {
-	case 0: // Status
-		m.state = "status"
-		if ai.IsOllamaAvailable() {
+	// Check if Ollama is available to determine menu structure
+	if !ai.IsOllamaAvailable() {
+		// Menu when Ollama is NOT installed
+		switch m.cursor {
+		case 0: // Warning message - do nothing
+			return m, nil
+		case 1: // Auto download Ollama
+			m.state = "downloading"
+			m.message = "Đang mở trang download Ollama..."
+			return m, downloadOllamaCmd()
+		case 2: // Open download page
+			m.message = "Mở https://ollama.ai/download trong browser..."
+			openBrowserFunc("https://ollama.ai/download")
+			return m, tea.Quit
+		case 3: // Back to main menu
+			return m, tea.Quit
+		}
+	} else {
+		// Menu when Ollama IS installed
+		switch m.cursor {
+		case 0: // Status
+			m.state = "status"
 			m.status = "running"
 			models, _ := ai.ListInstalledModels()
 			m.models = models
-		} else {
-			m.status = "stopped"
-		}
 
-	case 1: // List
-		m.state = "list"
-		if !ai.IsOllamaAvailable() {
-			m.err = fmt.Errorf("Ollama chưa chạy")
-			return m, nil
-		}
-		models, err := ai.ListInstalledModels()
-		if err != nil {
-			m.err = err
-		} else {
+		case 1: // List
+			m.state = "list"
+			models, err := ai.ListInstalledModels()
+			if err != nil {
+				m.err = err
+			} else {
+				m.models = models
+			}
+
+		case 2: // Install
+			m.state = "install"
+			return m, installModelCmd("qwen2.5-coder:3b")
+
+		case 3: // Remove
+			m.state = "remove"
+			models, err := ai.ListInstalledModels()
+			if err != nil {
+				m.err = err
+				return m, nil
+			}
+			if len(models) == 0 {
+				m.err = fmt.Errorf("Không có model nào để gỡ")
+				return m, nil
+			}
 			m.models = models
-		}
 
-	case 2: // Install
-		m.state = "install"
-		if !ai.IsOllamaAvailable() {
-			m.err = fmt.Errorf("Ollama chưa chạy. Cài đặt tại https://ollama.ai/download")
-			return m, nil
+		case 4: // Back to main menu
+			return m, tea.Quit
 		}
-		return m, installModelCmd("qwen2.5-coder:3b")
-
-	case 3: // Remove
-		m.state = "remove"
-		if !ai.IsOllamaAvailable() {
-			m.err = fmt.Errorf("Ollama chưa chạy")
-			return m, nil
-		}
-		models, err := ai.ListInstalledModels()
-		if err != nil {
-			m.err = err
-			return m, nil
-		}
-		if len(models) == 0 {
-			m.err = fmt.Errorf("Không có model nào để gỡ")
-			return m, nil
-		}
-		m.models = models
-
-	case 4: // Exit
-		return m, tea.Quit
 	}
 
 	return m, nil
@@ -362,4 +390,41 @@ func runAISetupInteractive() error {
 		return fmt.Errorf("lỗi TUI: %w", err)
 	}
 	return nil
+}
+
+// downloadOllamaCmd opens the Ollama download page
+func downloadOllamaCmd() tea.Cmd {
+	return func() tea.Msg {
+		url := getOllamaDownloadURL()
+		openBrowserFunc(url)
+		return nil
+	}
+}
+
+// getOllamaDownloadURL returns the download URL for current OS
+func getOllamaDownloadURL() string {
+	switch runtime.GOOS {
+	case "windows":
+		return "https://ollama.ai/download/windows"
+	case "darwin":
+		return "https://ollama.ai/download/mac"
+	case "linux":
+		return "https://ollama.ai/download/linux"
+	default:
+		return "https://ollama.ai/download"
+	}
+}
+
+// openBrowserFunc opens a URL in the default browser
+func openBrowserFunc(url string) error {
+	var cmd *exec.Cmd
+	switch runtime.GOOS {
+	case "windows":
+		cmd = exec.Command("cmd", "/c", "start", url)
+	case "darwin":
+		cmd = exec.Command("open", url)
+	default: // linux
+		cmd = exec.Command("xdg-open", url)
+	}
+	return cmd.Start()
 }
