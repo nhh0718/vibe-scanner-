@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/spf13/cobra"
-	"github.com/vibescanner/vibescanner/internal/output"
+	"github.com/nhh0718/vibe-scanner-/internal/output"
 )
 
 var serveCmd = &cobra.Command{

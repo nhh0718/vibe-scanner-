@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/vibescanner/vibescanner/internal/models"
+	"github.com/nhh0718/vibe-scanner-/internal/models"
 )
 
 // languageExtensions ánh xạ extension sang ngôn ngữ

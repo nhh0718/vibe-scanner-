@@ -7,8 +7,8 @@ import (
 	"path/filepath"
 	"runtime"
 
+	"github.com/nhh0718/vibe-scanner-/internal/output"
 	"github.com/spf13/cobra"
-	"github.com/vibescanner/vibescanner/internal/output"
 )
 
 // Config holds application configuration

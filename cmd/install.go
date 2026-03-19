@@ -8,7 +8,7 @@ import (
 	"runtime"
 
 	"github.com/spf13/cobra"
-	"github.com/vibescanner/vibescanner/internal/output"
+	"github.com/nhh0718/vibe-scanner-/internal/output"
 )
 
 var installCmd = &cobra.Command{
@@ -115,9 +115,35 @@ func uninstallGlobal() error {
 		return fmt.Errorf("VibeScanner chưa được cài đặt trong PATH: %w", err)
 	}
 
-	// Remove it
-	if err := os.Remove(path); err != nil {
-		return fmt.Errorf("không thể gỡ cài đặt: %w", err)
+	// On Windows, we can't delete a running executable directly
+	// Use a batch file to delete it after this process exits
+	if runtime.GOOS == "windows" {
+		// Create a temporary batch file to delete the executable
+		batchFile := filepath.Join(os.TempDir(), "vibescanner-uninstall.bat")
+		batchContent := fmt.Sprintf(`
+@echo off
+timeout /t 2 /nobreak >nul
+del "%s"
+del "%%~f0"
+`, path)
+
+		if err := os.WriteFile(batchFile, []byte(batchContent), 0644); err != nil {
+			// Fallback to direct removal
+			if err := os.Remove(path); err != nil {
+				return fmt.Errorf("không thể gỡ cài đặt (có thể do file đang chạy). Thử đóng terminal và chạy lại: %w", err)
+			}
+		} else {
+			// Start the batch file silently
+			exec.Command("cmd", "/c", "start", "", batchFile).Start()
+			output.PrintSuccess("Đã gỡ cài đặt VibeScanner khỏi %s", path)
+			fmt.Println("🔄 Vui lòng đóng terminal này để hoàn tất.")
+			return nil
+		}
+	} else {
+		// Unix: directly remove
+		if err := os.Remove(path); err != nil {
+			return fmt.Errorf("không thể gỡ cài đặt: %w", err)
+		}
 	}
 
 	output.PrintSuccess("Đã gỡ cài đặt VibeScanner khỏi %s", path)

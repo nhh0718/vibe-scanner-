@@ -209,6 +209,23 @@ vibescanner install
 vibescanner uninstall
 ```
 
+> ⚠️ **Lưu ý trên Windows:** Nếu gặp lỗi "Access is denied" khi uninstall, đóng terminal và chạy lại lệnh.
+
+### 3.6 Cập nhật lên phiên bản mới
+
+```bash
+# Tự động kiểm tra và cài đặt phiên bản mới nhất
+vibescanner update
+```
+
+Lệnh này sẽ:
+1. Kiểm tra phiên bản mới nhất trên GitHub
+2. Tải xuống binary phù hợp với OS của bạn
+3. Gỡ bản cũ (nếu đã cài global)
+4. Cài đặt bản mới
+
+> 💡 **Lưu ý:** Nếu đang chạy `vibescanner update` từ binary đã cài global, trên Windows bạn cần đóng terminal sau khi update để hoàn tất.
+
 ---
 
 ## 4. Sử dụng Interactive Menu
@@ -527,7 +544,7 @@ vibescanner config init
 
 ## 🆘 Cần trợ giúp?
 
-- **Issues**: https://github.com/vibescanner/vibescanner/issues
+- **Issues**: https://github.com/nhh0718/vibe-scanner-/issues
 - **Documentation**: Xem thêm `README.md`
 - **Help**: Chạy `vibescanner --help` hoặc `vibescanner [command] --help`
 

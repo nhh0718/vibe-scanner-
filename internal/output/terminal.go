@@ -9,8 +9,8 @@ import (
 	"time"
 
 	"github.com/fatih/color"
-	"github.com/vibescanner/vibescanner/internal/aggregation"
-	"github.com/vibescanner/vibescanner/internal/models"
+	"github.com/nhh0718/vibe-scanner-/internal/aggregation"
+	"github.com/nhh0718/vibe-scanner-/internal/models"
 )
 
 // PrintTerminal in kết quả ra terminal

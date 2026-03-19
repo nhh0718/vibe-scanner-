@@ -3,7 +3,7 @@ package output
 import (
 	"fmt"
 
-	"github.com/vibescanner/vibescanner/internal/models"
+	"github.com/nhh0718/vibe-scanner-/internal/models"
 )
 
 // GeneratePDF tạo PDF report (placeholder implementation)

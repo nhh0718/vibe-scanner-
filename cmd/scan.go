@@ -6,9 +6,9 @@ import (
 	"path/filepath"
 
 	"github.com/fatih/color"
+	"github.com/nhh0718/vibe-scanner-/internal/engines"
+	"github.com/nhh0718/vibe-scanner-/internal/output"
 	"github.com/spf13/cobra"
-	"github.com/vibescanner/vibescanner/internal/engines"
-	"github.com/vibescanner/vibescanner/internal/output"
 )
 
 var (

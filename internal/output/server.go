@@ -6,8 +6,8 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/vibescanner/vibescanner/internal/ai"
-	"github.com/vibescanner/vibescanner/internal/models"
+	"github.com/nhh0718/vibe-scanner-/internal/ai"
+	"github.com/nhh0718/vibe-scanner-/internal/models"
 )
 
 // GetWebFSFunc is set by main package to provide embedded web files

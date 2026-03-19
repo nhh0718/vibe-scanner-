@@ -6,9 +6,9 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/vibescanner/vibescanner/internal/aggregation"
-	"github.com/vibescanner/vibescanner/internal/ingestion"
-	"github.com/vibescanner/vibescanner/internal/models"
+	"github.com/nhh0718/vibe-scanner-/internal/aggregation"
+	"github.com/nhh0718/vibe-scanner-/internal/ingestion"
+	"github.com/nhh0718/vibe-scanner-/internal/models"
 )
 
 // ScanProject quét toàn bộ project và trả về kết quả

@@ -6,7 +6,7 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/vibescanner/vibescanner/internal/models"
+	"github.com/nhh0718/vibe-scanner-/internal/models"
 )
 
 // PromptTemplate data structure for prompts

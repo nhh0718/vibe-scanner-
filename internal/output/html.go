@@ -7,8 +7,8 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/vibescanner/vibescanner/internal/aggregation"
-	"github.com/vibescanner/vibescanner/internal/models"
+	"github.com/nhh0718/vibe-scanner-/internal/aggregation"
+	"github.com/nhh0718/vibe-scanner-/internal/models"
 )
 
 // GenerateHTML tạo HTML report và mở browser nếu cần

@@ -5,7 +5,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/vibescanner/vibescanner/internal/models"
+	"github.com/nhh0718/vibe-scanner-/internal/models"
 )
 
 // Deduplicate loại bỏ findings trùng lặp

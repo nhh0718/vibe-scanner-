@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/vibescanner/vibescanner/internal/models"
+	"github.com/nhh0718/vibe-scanner-/internal/models"
 )
 
 // RunSemgrep chạy Semgrep và trả về findings

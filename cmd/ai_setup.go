@@ -3,9 +3,9 @@ package cmd
 import (
 	"fmt"
 
+	"github.com/nhh0718/vibe-scanner-/internal/ai"
+	"github.com/nhh0718/vibe-scanner-/internal/output"
 	"github.com/spf13/cobra"
-	"github.com/vibescanner/vibescanner/internal/ai"
-	"github.com/vibescanner/vibescanner/internal/output"
 )
 
 // aiSetupCmd represents the ai-setup command

@@ -1,8 +1,8 @@
 package main
 
 import (
-	"github.com/vibescanner/vibescanner/cmd"
-	"github.com/vibescanner/vibescanner/internal/output"
+	"github.com/nhh0718/vibe-scanner-/cmd"
+	"github.com/nhh0718/vibe-scanner-/internal/output"
 )
 
 func init() {

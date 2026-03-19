@@ -1,4 +1,4 @@
-module github.com/vibescanner/vibescanner
+module github.com/nhh0718/vibe-scanner-
 
 go 1.25.1
 
