@@ -182,24 +182,19 @@ func isGloballyInstalled() bool {
 }
 
 func installBinary(sourcePath string) error {
-	// Find install directory
+	// Get the currently running executable path
 	execPath, err := os.Executable()
 	if err != nil {
 		return err
 	}
 
-	// Get target path
+	// Use execPath directly - this is where the current binary is running from
 	targetPath := execPath
-	if isGloballyInstalled() {
-		// Keep the same global path
-		path, _ := exec.LookPath("vibescanner")
-		targetPath = path
-	}
 
 	// On Windows, we need to handle the running executable
 	if runtime.GOOS == "windows" {
 		// Create a batch file to replace the binary after exit
-		batchFile := sourcePath + ".bat"
+		batchFile := os.TempDir() + "\\vibe-update.bat"
 		batchContent := fmt.Sprintf(`
 @echo off
 timeout /t 2 /nobreak >nul
@@ -213,7 +208,7 @@ del "%%~f0"
 
 		// Start the batch file and exit
 		exec.Command("cmd", "/c", "start", "", batchFile).Start()
-		fmt.Println("🔄 Vui lòng đợi vài giây để hoàn tất cập nhật...")
+		fmt.Println("🔄 Vui lòng đóng và mở lại terminal để hoàn tất cập nhật...")
 		return nil
 	}
 
