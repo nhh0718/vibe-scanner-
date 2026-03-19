@@ -1,0 +1,298 @@
+rules:
+  # CORS Wildcard - cho phép bất kỳ website nào gọi API
+  - id: vibescan-cors-wildcard
+    patterns:
+      - pattern: |
+          app.use(cors({ origin: "*" }))
+      - pattern: |
+          cors({ origin: '*' })
+      - pattern: |
+          res.header("Access-Control-Allow-Origin", "*")
+    message: |
+      ⚠️ CORS wildcard cho phép BẤT KỲ website nào gọi API của bạn!
+      
+      NGUY HIỂM: Bất kỳ website nào (kể cả malicious) đều có thể gọi API của bạn.
+      
+      SỬA: Chỉ định domain cụ thể:
+      ```javascript
+      app.use(cors({ 
+        origin: "https://yourdomain.com",
+        credentials: true 
+      }))
+      ```
+    severity: ERROR
+    languages: [javascript, typescript]
+    metadata:
+      category: security
+      cwe: "CWE-942: Overly Permissive Cross-domain Whitelist"
+
+  # JWT Weak Secret
+  - id: vibescan-jwt-weak-secret
+    patterns:
+      - pattern: |
+          jwt.sign($PAYLOAD, "secret", ...)
+      - pattern: |
+          jwt.sign($PAYLOAD, "password", ...)
+      - pattern: |
+          jwt.sign($PAYLOAD, "123456", ...)
+      - pattern: |
+          jwt.sign($PAYLOAD, "admin", ...)
+      - pattern: |
+          jwt.sign($PAYLOAD, "default", ...)
+      - pattern: |
+          jwt.sign($PAYLOAD, $SECRET, ...) 
+      - metavariable-regex:
+          metavariable: $SECRET
+          regex: "^['\"](secret|password|123456|admin|default|test|jwt|key)['\"]$"
+    message: |
+      🔑 JWT secret quá yếu hoặc hardcoded!
+      
+      NGUY HIỂM: Ai cũng có thể đoán được secret này và tạo token giả mạo.
+      
+      SỬA: Dùng secret ngẫu nhiên dài ít nhất 32 ký tự, lưu trong biến môi trường:
+      ```javascript
+      const JWT_SECRET = process.env.JWT_SECRET || require('crypto').randomBytes(64).toString('hex')
+      jwt.sign(payload, JWT_SECRET, { expiresIn: '1h' })
+      ```
+    severity: ERROR
+    languages: [javascript, typescript]
+    metadata:
+      category: security
+      cwe: "CWE-798: Use of Hard-coded Credentials"
+
+  # No Rate Limiting on Auth Routes
+  - id: vibescan-no-rate-limit-login
+    patterns:
+      - pattern: |
+          app.post("/login", ...)
+      - pattern-not: |
+          app.post("/login", rateLimit(...), ...)
+      - pattern-not: |
+          app.use(rateLimit(...))
+    message: |
+      🚨 Route đăng nhập không có rate limiting!
+      
+      NGUY HIỂM: Hacker có thể thử hàng triệu mật khẩu tự động (brute force attack).
+      
+      SỬA: Thêm rate limiting:
+      ```javascript
+      const rateLimit = require('express-rate-limit')
+      
+      const loginLimiter = rateLimit({
+        windowMs: 15 * 60 * 1000, // 15 phút
+        max: 5, // 5 lần thử
+        message: 'Quá nhiều lần đăng nhập thất bại, vui lòng thử lại sau 15 phút'
+      })
+      
+      app.post("/login", loginLimiter, ...)
+      ```
+    severity: WARNING
+    languages: [javascript, typescript]
+    metadata:
+      category: security
+      cwe: "CWE-307: Improper Restriction of Excessive Authentication Attempts"
+
+  # Hardcoded API Keys in Source
+  - id: vibescan-hardcoded-api-key
+    patterns:
+      - pattern-regex: (api[_-]?key|apikey|api_token|access_token)\s*[:=]\s*["'][a-zA-Z0-9_-]{20,}["']
+      - pattern-regex: (OPENAI_API_KEY|STRIPE_KEY|AWS_ACCESS_KEY|GITHUB_TOKEN)\s*=\s*["'][a-zA-Z0-9_-]{10,}["']
+    message: |
+      🔐 API key hardcoded trong source code!
+      
+      NGUY HIỂM: API key bị lộ trong git history. Hacker có thể:
+      - Dùng key để gọi API tốn tiền của bạn
+      - Truy cập dữ liệu nhạy cảm
+      
+      SỬA KHẨN CẤP:
+      1. Xóa key khỏi code ngay lập tức
+      2. Revoke key cũ trên dashboard của provider
+      3. Tạo key mới và lưu trong .env:
+      ```javascript
+      const apiKey = process.env.API_KEY
+      ```
+      4. Thêm .env vào .gitignore
+    severity: ERROR
+    languages: [javascript, typescript, python, go]
+    metadata:
+      category: secrets
+      cwe: "CWE-798: Use of Hard-coded Credentials"
+
+  # SQL Injection - String Concatenation
+  - id: vibescan-sql-injection-string
+    patterns:
+      - pattern: |
+          $QUERY = "SELECT * FROM " + $TABLE + " WHERE " + $COLUMN + " = '" + $VALUE + "'"
+      - pattern: |
+          $QUERY = `SELECT * FROM ${$TABLE} WHERE ${$COLUMN} = '${$VALUE}'`
+      - pattern: |
+          db.query("SELECT * FROM users WHERE id = '" + req.params.id + "'")
+      - pattern: |
+          db.exec("DELETE FROM " + $TABLE)
+    message: |
+      💥 SQL Injection vulnerability!
+      
+      NGUY HIỂM: Hacker có thể:
+      - Đọc toàn bộ database: ' OR '1'='1
+      - Xóa database: '; DROP TABLE users; --
+      - Lấy thông tin nhạy cảm
+      
+      SỬA: Dùng parameterized queries:
+      ```javascript
+      // ❌ KHÔNG:
+      db.query("SELECT * FROM users WHERE id = '" + userId + "'")
+      
+      // ✅ CÓ:
+      db.query("SELECT * FROM users WHERE id = ?", [userId])
+      
+      // Hoặc với ORM:
+      User.findByPk(userId)
+      ```
+    severity: ERROR
+    languages: [javascript, typescript, python]
+    metadata:
+      category: security
+      cwe: "CWE-89: SQL Injection"
+
+  # Eval / Function Constructor
+  - id: vibescan-dangerous-eval
+    patterns:
+      - pattern: eval($INPUT)
+      - pattern: new Function($INPUT)
+      - pattern: setTimeout($STRING, ...)
+      - pattern: setInterval($STRING, ...)
+    message: |
+      ☠️ Code Injection qua eval() hoặc Function constructor!
+      
+      NGUY HIỂM: Hacker có thể inject và chạy bất kỳ code nào trên server.
+      
+      SỬA: Không bao giờ dùng eval() với user input. Thay thế:
+      ```javascript
+      // ❌ KHÔNG:
+      eval(userInput)
+      setTimeout("console.log('test')", 1000)
+      
+      // ✅ CÓ:
+      JSON.parse(userInput) // Nếu cần parse JSON
+      setTimeout(() => console.log('test'), 1000) // Dùng arrow function
+      ```
+    severity: ERROR
+    languages: [javascript, typescript]
+    metadata:
+      category: security
+      cwe: "CWE-95: Eval Injection"
+
+  # .env File Committed
+  - id: vibescan-dotenv-committed
+    pattern: |
+      DB_PASSWORD=$VALUE
+    paths:
+      include:
+        - "**/.env"
+        - "**/.env.local"
+        - "**/.env.production"
+        - "**/.env.development"
+    message: |
+      🚨 File .env đang được commit vào git!
+      
+      NGUY HIỂM CỰC KỲ NGHIÊM TRỌNG: 
+      - Mật khẩu database, API keys, secrets đều bị lộ
+      - Ngay cả khi xóa sau này, vẫn còn trong git history
+      
+      SỬA KHẨN CẤP:
+      1. Thêm ngay vào .gitignore:
+         ```
+         .env
+         .env.*
+         ```
+      2. Xóa khỏi git cache (KHÔNG xóa file thật):
+         ```bash
+         git rm --cached .env
+         git commit -m "Remove .env from git"
+         ```
+      3. Rotate TẤT CẢ credentials trong file .env
+    severity: ERROR
+    languages: [generic]
+    metadata:
+      category: secrets
+      cwe: "CWE-798: Use of Hard-coded Credentials"
+
+  # Insecure Password Storage
+  - id: vibescan-insecure-password
+    patterns:
+      - pattern-regex: bcrypt\.hash\(.*?\,\s*(\d|[1-9])\s*\)
+      - pattern: md5($PASSWORD)
+      - pattern: sha1($PASSWORD)
+      - pattern: crypto.createHash("md5")
+      - pattern: crypto.createHash("sha1")
+    message: |
+      🔒 Password hashing không an toàn!
+      
+      NGUY HIỂM: 
+      - MD5/SHA1: Có thể crack trong giây lát
+      - Bcrypt với cost thấp (< 10): Dễ bị brute force
+      
+      SỬA:
+      ```javascript
+      // ❌ KHÔNG:
+      const hash = md5(password)
+      const hash = crypto.createHash("sha1").update(password).digest()
+      bcrypt.hash(password, 4) // Cost quá thấp
+      
+      // ✅ CÓ:
+      const bcrypt = require('bcrypt')
+      const saltRounds = 12 // Tối thiểu 10
+      const hash = await bcrypt.hash(password, saltRounds)
+      
+      // Verify:
+      const match = await bcrypt.compare(password, hash)
+      ```
+    severity: ERROR
+    languages: [javascript, typescript, python]
+    metadata:
+      category: security
+      cwe: "CWE-916: Improperly Implemented Password Hashing"
+
+  # Path Traversal
+  - id: vibescan-path-traversal
+    patterns:
+      - pattern: |
+          fs.readFileSync(req.params.$PARAM)
+      - pattern: |
+          res.sendFile(req.query.$PARAM)
+      - pattern: |
+          path.join($DIR, req.params.$PARAM)
+    message: |
+      📁 Path Traversal vulnerability!
+      
+      NGUY HIỂM: Hacker có thể đọc bất kỳ file nào trên server:
+      - GET /files/../../../etc/passwd
+      - GET /files/../../../.env
+      
+      SỬA:
+      ```javascript
+      // ❌ KHÔNG:
+      app.get('/files/:name', (req, res) => {
+        res.sendFile('./uploads/' + req.params.name)
+      })
+      
+      // ✅ CÓ:
+      const path = require('path')
+      const sanitize = require('sanitize-filename')
+      
+      app.get('/files/:name', (req, res) => {
+        const safeName = sanitize(req.params.name)
+        const filePath = path.resolve('./uploads', safeName)
+        
+        // Kiểm tra file có nằm trong uploads không
+        if (!filePath.startsWith(path.resolve('./uploads'))) {
+          return res.status(403).send('Forbidden')
+        }
+        res.sendFile(filePath)
+      })
+      ```
+    severity: ERROR
+    languages: [javascript, typescript]
+    metadata:
+      category: security
+      cwe: "CWE-22: Path Traversal"
