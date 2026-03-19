@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"runtime"
 	"time"
 
@@ -55,7 +56,7 @@ func runUpdate() error {
 	if err != nil {
 		return fmt.Errorf("lỗi khi tải xuống: %w", err)
 	}
-	defer os.Remove(tempFile)
+	// Don't defer os.Remove - let installBinary handle cleanup on Windows
 
 	fmt.Println("🔧 Đang cài đặt...")
 
@@ -193,22 +194,36 @@ func installBinary(sourcePath string) error {
 
 	// On Windows, we need to handle the running executable
 	if runtime.GOOS == "windows" {
+		// Ensure we have absolute paths
+		absSource, _ := filepath.Abs(sourcePath)
+		absTarget, _ := filepath.Abs(targetPath)
+		
 		// Create a batch file to replace the binary after exit
-		batchFile := os.TempDir() + "\\vibe-update.bat"
-		batchContent := fmt.Sprintf(`
-@echo off
+		batchFile := filepath.Join(os.TempDir(), "vibe-update.bat")
+		batchContent := fmt.Sprintf(`@echo off
+echo Updating VibeScanner...
 timeout /t 2 /nobreak >nul
-move /Y "%s" "%s"
+if exist "%s" (
+    move /Y "%s" "%s"
+    if %%ERRORLEVEL%% EQU 0 (
+        echo Update successful!
+    ) else (
+        echo Update failed!
+    )
+) else (
+    echo Source file not found: %s
+)
+del "%s" 2>nul
 del "%%~f0"
-`, sourcePath, targetPath)
+`, absSource, absSource, absTarget, absSource, absSource)
 
 		if err := os.WriteFile(batchFile, []byte(batchContent), 0644); err != nil {
 			return err
 		}
 
 		// Start the batch file and exit
-		exec.Command("cmd", "/c", "start", "", batchFile).Start()
-		fmt.Println("🔄 Vui lòng đóng và mở lại terminal để hoàn tất cập nhật...")
+		exec.Command("cmd", "/c", "start", "/min", batchFile).Start()
+		fmt.Println("🔄 Đang cập nhật... Vui lòng đóng terminal và mở lại.")
 		return nil
 	}
 
