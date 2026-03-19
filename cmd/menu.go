@@ -35,6 +35,7 @@ var (
 
 // MenuItem represents a menu option
 type MenuItem struct {
+	Number      int
 	Title       string
 	Description string
 	Command     string
@@ -54,13 +55,24 @@ func (d menuDelegate) Render(w io.Writer, m list.Model, index int, listItem list
 		return
 	}
 
+	numberStyle := lipgloss.NewStyle().
+		Foreground(ui.BlueColor).
+		Bold(true).
+		Width(4)
+	
 	var str string
 	if index == m.Index() {
-		str = selectedItemStyle.Render("▸ " + i.Title)
-		str += "\n" + descStyle.Render("  "+i.Description)
+		// Selected item
+		num := numberStyle.Render(fmt.Sprintf("[%d]", i.Number))
+		title := selectedItemStyle.Render("▸ " + i.Title)
+		str = num + " " + title
+		str += "\n" + descStyle.Render("     "+i.Description)
 	} else {
-		str = itemStyle.Render(i.Title)
-		str += "\n" + descStyle.Render("  "+i.Description)
+		// Normal item
+		num := numberStyle.Render(fmt.Sprintf(" %d ", i.Number))
+		title := itemStyle.Render(i.Title)
+		str = num + " " + title
+		str += "\n" + descStyle.Render("     "+i.Description)
 	}
 	fmt.Fprint(w, str)
 }
@@ -156,33 +168,39 @@ func runInteractiveMenu() error {
 	for {
 		items := []list.Item{
 			MenuItem{
-				Title:       "🔍 Scan Project",
-				Description: "Quét codebase để tìm lỗi bảo mật và chất lượng",
+				Number:      1,
+				Title:       "Quét dự án",
+				Description: "Phân tích codebase tìm lỗi bảo mật và chất lượng",
 				Command:     "scan",
 			},
 			MenuItem{
-				Title:       "🌐 Web Dashboard",
-				Description: "Mở dashboard trong browser",
+				Number:      2,
+				Title:       "Xem bảng điều khiển",
+				Description: "Mở giao diện web hiển thị kết quả quét",
 				Command:     "serve",
 			},
 			MenuItem{
-				Title:       "🤖 AI Setup",
-				Description: "Cài đặt và quản lý AI models",
+				Number:      3,
+				Title:       "Cài đặt AI",
+				Description: "Thiết lập và quản lý các mô hình AI",
 				Command:     "ai-setup",
 			},
 			MenuItem{
-				Title:       "⚙️  Cấu hình",
-				Description: "Xem và chỉnh sửa cấu hình",
+				Number:      4,
+				Title:       "Cấu hình hệ thống",
+				Description: "Xem và chỉnh sửa các thiết lập",
 				Command:     "config",
 			},
 			MenuItem{
-				Title:       "📦 Cài đặt Global",
-				Description: "Thêm VibeScanner vào PATH",
+				Number:      5,
+				Title:       "Cài đặt toàn cục",
+				Description: "Thêm công cụ vào PATH hệ thống",
 				Command:     "install",
 			},
 			MenuItem{
-				Title:       "❓ Help",
-				Description: "Xem hướng dẫn sử dụng",
+				Number:      6,
+				Title:       "Trợ giúp",
+				Description: "Hiển thị hướng dẫn sử dụng",
 				Command:     "help",
 			},
 		}

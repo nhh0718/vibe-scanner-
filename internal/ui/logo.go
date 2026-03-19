@@ -18,52 +18,49 @@ func GetLogo() string {
 	// Red style for 'E'
 	redStyle := lipgloss.NewStyle().Foreground(RedColor).Bold(true)
 	
-	// Blue style for 'T'
-	blueStyleT := lipgloss.NewStyle().Foreground(BlueColor).Bold(true)
-	
 	// Star for dot on 'i'
-	starStyle := lipgloss.NewStyle().Foreground(BlueColor)
+	starStyle := lipgloss.NewStyle().Foreground(BlueColor).Bold(true)
 	
 	logo := ""
 	
-	// Line 1: Star (dot on i)
-	logo += starStyle.Render("  ★") + "\n"
+	// Line 1: Star (dot on i) - add space before
+	logo += "   " + starStyle.Render("★") + "\n"
 	
 	// Line 2: Top of letters
-	logo += blueStyle.Render(" ██") + "  " + 
-		blueStyle.Render("███╗   ██╗") + " " +
-		redStyle.Render("███████╗") + " " +
-		blueStyleT.Render("████████╗") + "\n"
+	logo += "  " + blueStyle.Render("██") + "   " + 
+		blueStyle.Render("███╗   ██╗") + "  " +
+		redStyle.Render("███████╗") + "  " +
+		blueStyle.Render("████████╗") + "\n"
 	
 	// Line 3
-	logo += blueStyle.Render(" ██") + "  " +
-		blueStyle.Render("████╗  ██║") + " " +
-		redStyle.Render("██╔════╝") + " " +
-		blueStyleT.Render("╚══██╔══╝") + "\n"
+	logo += "  " + blueStyle.Render("██") + "   " +
+		blueStyle.Render("████╗  ██║") + "  " +
+		redStyle.Render("██╔════╝") + "  " +
+		blueStyle.Render("╚══██╔══╝") + "\n"
 	
 	// Line 4
-	logo += blueStyle.Render(" ██") + "  " +
-		blueStyle.Render("██╔██╗ ██║") + " " +
-		redStyle.Render("█████╗  ") + " " +
-		blueStyleT.Render("   ██║   ") + "\n"
+	logo += "  " + blueStyle.Render("██") + "   " +
+		blueStyle.Render("██╔██╗ ██║") + "  " +
+		redStyle.Render("█████╗  ") + "  " +
+		blueStyle.Render("   ██║   ") + "\n"
 	
 	// Line 5
-	logo += blueStyle.Render(" ██") + "  " +
-		blueStyle.Render("██║╚██╗██║") + " " +
-		redStyle.Render("██╔══╝  ") + " " +
-		blueStyleT.Render("   ██║   ") + "\n"
+	logo += "  " + blueStyle.Render("██") + "   " +
+		blueStyle.Render("██║╚██╗██║") + "  " +
+		redStyle.Render("██╔══╝  ") + "  " +
+		blueStyle.Render("   ██║   ") + "\n"
 	
 	// Line 6
-	logo += blueStyle.Render(" ██") + "  " +
-		blueStyle.Render("██║ ╚████║") + " " +
-		redStyle.Render("███████╗") + " " +
-		blueStyleT.Render("   ██║   ") + "\n"
+	logo += "  " + blueStyle.Render("██") + "   " +
+		blueStyle.Render("██║ ╚████║") + "  " +
+		redStyle.Render("███████╗") + "  " +
+		blueStyle.Render("   ██║   ") + "\n"
 	
 	// Line 7: Bottom
-	logo += blueStyle.Render(" ╚═") + "  " +
-		blueStyle.Render("╚═╝  ╚═══╝") + " " +
-		redStyle.Render("╚══════╝") + " " +
-		blueStyleT.Render("   ╚═╝   ") + "\n"
+	logo += "  " + blueStyle.Render("╚═") + "   " +
+		blueStyle.Render("╚═╝  ╚═══╝") + "  " +
+		redStyle.Render("╚══════╝") + "  " +
+		blueStyle.Render("   ╚═╝   ") + "\n"
 	
 	return logo
 }
