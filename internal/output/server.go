@@ -19,7 +19,22 @@ func ServeDashboard(results *models.ScanResult, port int) error {
 	r := gin.New()
 	r.Use(gin.Recovery())
 
-	// API endpoints
+	// Serve embedded web dashboard - MUST be before API routes
+	staticFS, err := GetWebFSFunc()
+	if err != nil {
+		return fmt.Errorf("không thể tạo sub filesystem: %w", err)
+	}
+
+	// Serve static files with proper priority
+	staticServer := http.FileServer(http.FS(staticFS))
+	r.GET("/", func(c *gin.Context) {
+		staticServer.ServeHTTP(c.Writer, c.Request)
+	})
+	r.GET("/*filepath", func(c *gin.Context) {
+		staticServer.ServeHTTP(c.Writer, c.Request)
+	})
+
+	// API endpoints - after static routes
 	api := r.Group("/api")
 	{
 		api.GET("/scan", func(c *gin.Context) {
@@ -69,15 +84,6 @@ func ServeDashboard(results *models.ScanResult, port int) error {
 			})
 		})
 	}
-
-	// Serve embedded web dashboard
-	staticFS, err := GetWebFSFunc()
-	if err != nil {
-		return fmt.Errorf("không thể tạo sub filesystem: %w", err)
-	}
-
-	// Serve static files
-	r.StaticFS("/", http.FS(staticFS))
 
 	addr := fmt.Sprintf("localhost:%d", port)
 	fmt.Printf("🌐 Dashboard running at http://%s\n", addr)
