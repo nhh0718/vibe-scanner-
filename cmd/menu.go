@@ -242,8 +242,17 @@ func runServeInteractive() error {
 	if err != nil {
 		return fmt.Errorf("không tìm thấy kết quả scan trước đó: %w", err)
 	}
-	fmt.Println("📂 Mở dashboard tại http://localhost:7420")
-	return output.ServeDashboard(results, 7420)
+	fmt.Println("📂 Dashboard đang chạy tại http://localhost:7420")
+	fmt.Println("⚠️  Nhấn Ctrl+C để dừng server và quay lại menu...")
+	
+	// Run dashboard - this will block until Ctrl+C
+	if err := output.ServeDashboard(results, 7420); err != nil {
+		fmt.Printf("\n⚠️  Server dừng: %v\n", err)
+	}
+	
+	fmt.Println("\n✅ Dashboard đã dừng. Nhấn Enter để quay lại menu...")
+	fmt.Scanln()
+	return nil
 }
 
 // runConfigInteractive runs config from interactive mode

@@ -20,17 +20,18 @@ type aiMenuItem struct {
 
 // AISetupModel represents the TUI state
 type AISetupModel struct {
-	state     string // "menu", "installing", "removing", "status"
-	cursor    int
-	menuItems []aiMenuItem
-	models    []string
-	selected  map[int]struct{}
-	spinner   spinner.Model
-	status    string
-	message   string
-	err       error
-	width     int
-	height    int
+	state        string // "menu", "installing", "removing", "status", "select_model"
+	cursor       int
+	menuItems    []aiMenuItem
+	models       []string
+	selected     map[int]struct{}
+	spinner      spinner.Model
+	status       string
+	message      string
+	err          error
+	width        int
+	height       int
+	modelToInstall string
 }
 
 var (
@@ -129,14 +130,24 @@ func (m AISetupModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "up", "k":
 			if m.state == "menu" && m.cursor > 0 {
 				m.cursor--
+			} else if m.state == "select_model" && m.cursor > 0 {
+				m.cursor--
 			}
 
 		case "down", "j":
 			if m.state == "menu" && m.cursor < len(m.menuItems)-1 {
 				m.cursor++
+			} else if m.state == "select_model" && m.cursor < len(m.models)-1 {
+				m.cursor++
 			}
 
 		case "enter", " ":
+			if m.state == "select_model" {
+				// Install selected model
+				m.modelToInstall = m.models[m.cursor]
+				m.state = "installing"
+				return m, installModelCmd(m.modelToInstall)
+			}
 			return m.handleSelection()
 
 		case "b":
@@ -198,9 +209,11 @@ func (m AISetupModel) handleSelection() (tea.Model, tea.Cmd) {
 				m.models = models
 			}
 
-		case 2: // Install
-			m.state = "install"
-			return m, installModelCmd("qwen2.5-coder:3b")
+		case 2: // Install - show model selection
+			m.state = "select_model"
+			m.cursor = 0
+			m.models = getRecommendedModels()
+			return m, nil
 
 		case 3: // Remove
 			m.state = "remove"
@@ -243,6 +256,10 @@ func (m AISetupModel) View() string {
 		return m.statusView()
 	case "list":
 		return m.listView()
+	case "select_model":
+		return m.selectModelView()
+	case "installing":
+		return m.installView()
 	case "install":
 		return m.installView()
 	case "remove":
@@ -345,8 +362,12 @@ func (m AISetupModel) installView() string {
 		b.WriteString(aiStatusBad.Render(fmt.Sprintf("❌ %v", m.err)))
 		b.WriteString("\n")
 	} else {
+		modelName := m.modelToInstall
+		if modelName == "" {
+			modelName = "qwen2.5-coder:3b"
+		}
 		b.WriteString(m.spinner.View())
-		b.WriteString(" Đang tải model qwen2.5-coder:3b...\n")
+		b.WriteString(fmt.Sprintf(" Đang tải model %s...\n", modelName))
 		b.WriteString("\n")
 		b.WriteString("Lần đầu cài có thể mất vài phút tùy vào tốc độ mạng.\n")
 	}
@@ -381,6 +402,54 @@ func (m AISetupModel) removeView() string {
 	b.WriteString(aiHelpStyle.Render("↑/↓: chọn • enter: gỡ • b: quay lại • q: thoát"))
 
 	return b.String()
+}
+
+func (m AISetupModel) selectModelView() string {
+	var b strings.Builder
+
+	b.WriteString(aiTitleStyle.Render("⬇️  Chọn model để cài đặt"))
+	b.WriteString("\n\n")
+	b.WriteString(aiInfoStyle.Render("Chọn model phù hợp với cấu hình máy của bạn:"))
+	b.WriteString("\n\n")
+
+	modelDescriptions := map[string]string{
+		"qwen2.5-coder:0.5b": "Siêu nhẹ - 0.5B params (~350MB) - Máy yếu, RAM < 4GB",
+		"qwen2.5-coder:1.5b": "Nhẹ - 1.5B params (~1GB) - Máy trung bình, RAM 4-8GB",
+		"qwen2.5-coder:3b":   "Cân bằng - 3B params (~2GB) - Máy tốt, RAM 8-16GB (Khuyến nghị)",
+		"qwen2.5-coder:7b":   "Mạnh - 7B params (~4.7GB) - Máy mạnh, RAM 16GB+",
+		"qwen2.5-coder:14b":  "Rất mạnh - 14B params (~9GB) - Máy rất mạnh, RAM 32GB+",
+		"qwen2.5-coder:32b":  "Cực mạnh - 32B params (~20GB) - Workstation, RAM 64GB+",
+	}
+
+	for i, model := range m.models {
+		desc := modelDescriptions[model]
+		if m.cursor == i {
+			b.WriteString(aiSelectedStyle.Render(fmt.Sprintf("▸ %s", model)))
+			b.WriteString("\n")
+			b.WriteString(aiDescStyle.Render(fmt.Sprintf("  %s", desc)))
+		} else {
+			b.WriteString(aiNormalStyle.Render(fmt.Sprintf("  %s", model)))
+			b.WriteString("\n")
+			b.WriteString(aiDescStyle.Render(fmt.Sprintf("  %s", desc)))
+		}
+		b.WriteString("\n\n")
+	}
+
+	b.WriteString(aiHelpStyle.Render("↑/↓: chọn • enter: cài đặt • b: quay lại • q: thoát"))
+
+	return b.String()
+}
+
+// getRecommendedModels returns a list of recommended models based on system specs
+func getRecommendedModels() []string {
+	return []string{
+		"qwen2.5-coder:0.5b",
+		"qwen2.5-coder:1.5b",
+		"qwen2.5-coder:3b",
+		"qwen2.5-coder:7b",
+		"qwen2.5-coder:14b",
+		"qwen2.5-coder:32b",
+	}
 }
 
 // runAISetupInteractive runs the AI setup TUI
