@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -11,6 +12,13 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/spf13/cobra"
+)
+
+// These are set at build time via ldflags
+var (
+	version = "dev"
+	commit  = "unknown"
+	date    = "unknown"
 )
 
 var updateCmd = &cobra.Command{
@@ -32,7 +40,13 @@ func runUpdate() error {
 	}
 
 	// Check if already up to date
-	currentVersion := "0.2.0" // This should match your current version
+	currentVersion := version
+	if currentVersion == "dev" {
+		fmt.Println("⚠️  Phiên bản dev (build từ source). Không thể tự động update.")
+		fmt.Println("   Vui lòng build lại từ source hoặc tải binary từ GitHub.")
+		return nil
+	}
+
 	if latestVersion == currentVersion {
 		color.Green("✅ Bạn đang dùng phiên bản mới nhất (%s)", currentVersion)
 		return nil
@@ -69,10 +83,38 @@ func runUpdate() error {
 }
 
 func getLatestReleaseInfo() (version, url string, err error) {
-	// For now, hardcode the latest version
-	// In production, you would call GitHub API
-	latestVersion := "0.2.0"
+	// Call GitHub API to get latest release
+	apiURL := "https://api.github.com/repos/nhh0718/vibe-scanner-/releases/latest"
+	
+	client := &http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Get(apiURL)
+	if err != nil {
+		return "", "", fmt.Errorf("không thể kết nối GitHub API: %w", err)
+	}
+	defer resp.Body.Close()
 
+	if resp.StatusCode != http.StatusOK {
+		return "", "", fmt.Errorf("GitHub API trả về status %d", resp.StatusCode)
+	}
+
+	var release struct {
+		TagName string `json:"tag_name"`
+		Assets  []struct {
+			Name string `json:"name"`
+			URL  string `json:"browser_download_url"`
+		} `json:"assets"`
+	}
+
+	if err := json.NewDecoder(resp.Body).Decode(&release); err != nil {
+		return "", "", fmt.Errorf("không thể parse response: %w", err)
+	}
+
+	latestVersion := release.TagName
+	if latestVersion == "" {
+		return "", "", fmt.Errorf("không tìm thấy tag name trong release")
+	}
+
+	// Find appropriate binary for this OS/arch
 	var filename string
 	switch runtime.GOOS {
 	case "windows":
@@ -87,10 +129,18 @@ func getLatestReleaseInfo() (version, url string, err error) {
 		filename = "vibescanner-linux-amd64"
 	}
 
-	downloadURL := fmt.Sprintf(
-		"https://github.com/nhh0718/vibe-scanner-/releases/download/%s/%s",
-		latestVersion, filename,
-	)
+	// Find the asset URL
+	var downloadURL string
+	for _, asset := range release.Assets {
+		if asset.Name == filename {
+			downloadURL = asset.URL
+			break
+		}
+	}
+
+	if downloadURL == "" {
+		return "", "", fmt.Errorf("không tìm thấy binary %s trong release %s", filename, latestVersion)
+	}
 
 	return latestVersion, downloadURL, nil
 }
