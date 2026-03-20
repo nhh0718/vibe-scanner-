@@ -1,37 +1,50 @@
-﻿# Build script for VibeScanner on Windows
-# Run: .\build.ps1
+# Build script for VibeScanner on Windows
+# Usage: .\build.ps1 [version]
+# If no version provided, reads from latest git tag
 
-$VERSION = "0.7.0"
-$OUTDIR = "v$VERSION"
-$COMMIT = git rev-parse --short HEAD
-$DATE = Get-Date -Format "yyyy-MM-dd"
-$LDFLAGS = "-s -w -X github.com/nhh0718/vibe-scanner-/cmd.version=$VERSION -X github.com/nhh0718/vibe-scanner-/cmd.commit=$COMMIT -X github.com/nhh0718/vibe-scanner-/cmd.date=$DATE"
+param([string]$Ver)
+$ErrorActionPreference = 'Stop'
 
-Write-Host "Building VibeScanner v$VERSION..." -ForegroundColor Cyan
+if (-not $Ver) {
+    $Ver = (git describe --tags --abbrev=0 2>$null) -replace '^v',''
+    if (-not $Ver) { $Ver = "dev" }
+}
+
+$OUTDIR = "dist"
+$MODULE = "github.com/nhh0718/vibe-scanner-"
+$LDFLAGS = "-s -w -X $MODULE/cmd.version=$Ver"
+
+Write-Host "Building VibeScanner v$Ver..." -ForegroundColor Cyan
 Write-Host ""
+
+# Build web dashboard if needed
+if (-not (Test-Path "web/dist")) {
+    Write-Host "Building web dashboard..." -ForegroundColor Yellow
+    Push-Location web
+    npm ci
+    npm run build
+    Pop-Location
+}
 
 New-Item -ItemType Directory -Force -Path $OUTDIR | Out-Null
 
-Write-Host "Building Windows AMD64..." -ForegroundColor Yellow
-$env:GOOS = "windows"; $env:GOARCH = "amd64"
-go build -ldflags "$LDFLAGS" -o "$OUTDIR/vibescanner-windows-amd64.exe" .
+$targets = @(
+    @{ GOOS="windows"; GOARCH="amd64"; EXT=".exe" },
+    @{ GOOS="darwin";  GOARCH="amd64"; EXT="" },
+    @{ GOOS="darwin";  GOARCH="arm64"; EXT="" },
+    @{ GOOS="linux";   GOARCH="amd64"; EXT="" }
+)
 
-Write-Host "Building macOS AMD64..." -ForegroundColor Yellow
-$env:GOOS = "darwin"; $env:GOARCH = "amd64"
-go build -ldflags "$LDFLAGS" -o "$OUTDIR/vibescanner-darwin-amd64" .
-
-Write-Host "Building macOS ARM64..." -ForegroundColor Yellow
-$env:GOOS = "darwin"; $env:GOARCH = "arm64"
-go build -ldflags "$LDFLAGS" -o "$OUTDIR/vibescanner-darwin-arm64" .
-
-Write-Host "Building Linux AMD64..." -ForegroundColor Yellow
-$env:GOOS = "linux"; $env:GOARCH = "amd64"
-go build -ldflags "$LDFLAGS" -o "$OUTDIR/vibescanner-linux-amd64" .
+foreach ($t in $targets) {
+    $output = "$OUTDIR/vibescanner-$($t.GOOS)-$($t.GOARCH)$($t.EXT)"
+    Write-Host "Building $($t.GOOS)/$($t.GOARCH)..." -ForegroundColor Yellow
+    $env:GOOS = $t.GOOS; $env:GOARCH = $t.GOARCH
+    go build -ldflags "$LDFLAGS" -o $output .
+}
 
 Remove-Item Env:\GOOS -ErrorAction SilentlyContinue
 Remove-Item Env:\GOARCH -ErrorAction SilentlyContinue
 
 Write-Host ""
 Write-Host "Build complete! Binaries in $OUTDIR/" -ForegroundColor Green
-Write-Host ""
 Get-ChildItem $OUTDIR | Select-Object Name, @{N="Size(MB)";E={[math]::Round($_.Length/1MB,2)}}

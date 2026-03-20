@@ -1,40 +1,46 @@
 #!/bin/bash
 # Build script for VibeScanner release
-# Creates binaries for all platforms in v{VERSION} folder
+# Usage: ./build-release.sh [version]
+# If no version provided, reads from latest git tag
 
-VERSION="0.3.0"
-OUTDIR="v${VERSION}"
-LDFLAGS="-s -w -X main.version=${VERSION} -X main.commit=$(git rev-parse --short HEAD) -X main.date=$(date +%Y-%m-%d)"
+set -e
 
-echo "🔨 Building VibeScanner v${VERSION}..."
+# Version: from argument, git tag, or "dev"
+VERSION="${1:-$(git describe --tags --abbrev=0 2>/dev/null || echo 'dev')}"
+VERSION="${VERSION#v}"  # Strip leading 'v'
+
+OUTDIR="dist"
+MODULE="github.com/nhh0718/vibe-scanner-"
+LDFLAGS="-s -w -X ${MODULE}/cmd.version=${VERSION}"
+
+echo "Building VibeScanner v${VERSION}..."
 echo ""
 
-# Create output directory
-mkdir -p ${OUTDIR}
+# Build web dashboard if needed
+if [ ! -d "web/dist" ]; then
+    echo "Building web dashboard..."
+    cd web && npm ci && npm run build && cd ..
+fi
 
-# Build Windows AMD64
-echo "📦 Building Windows AMD64..."
-GOOS=windows GOARCH=amd64 go build -ldflags "${LDFLAGS}" -o ${OUTDIR}/vibescanner-windows-amd64.exe .
+mkdir -p "${OUTDIR}"
 
-# Build macOS AMD64 (Intel)
-echo "📦 Building macOS AMD64 (Intel)..."
-GOOS=darwin GOARCH=amd64 go build -ldflags "${LDFLAGS}" -o ${OUTDIR}/vibescanner-darwin-amd64 .
+# Build all platforms
+PLATFORMS="windows/amd64 darwin/amd64 darwin/arm64 linux/amd64"
+for PLATFORM in ${PLATFORMS}; do
+    GOOS="${PLATFORM%/*}"
+    GOARCH="${PLATFORM#*/}"
+    EXT=""; [ "${GOOS}" = "windows" ] && EXT=".exe"
+    OUTPUT="${OUTDIR}/vibescanner-${GOOS}-${GOARCH}${EXT}"
 
-# Build macOS ARM64 (Apple Silicon M1/M2/M3)
-echo "📦 Building macOS ARM64 (Apple Silicon)..."
-GOOS=darwin GOARCH=arm64 go build -ldflags "${LDFLAGS}" -o ${OUTDIR}/vibescanner-darwin-arm64 .
-
-# Build Linux AMD64
-echo "📦 Building Linux AMD64..."
-GOOS=linux GOARCH=amd64 go build -ldflags "${LDFLAGS}" -o ${OUTDIR}/vibescanner-linux-amd64 .
+    echo "Building ${GOOS}/${GOARCH}..."
+    GOOS="${GOOS}" GOARCH="${GOARCH}" go build -ldflags "${LDFLAGS}" -o "${OUTPUT}" .
+done
 
 echo ""
-echo "✅ Build complete! Binaries in ${OUTDIR}/"
+echo "Build complete! Binaries in ${OUTDIR}/"
+ls -lh "${OUTDIR}/"
 echo ""
-echo "📋 Files:"
-ls -lh ${OUTDIR}/
-echo ""
-echo "🚀 To release:"
-echo "   1. git tag -a v${VERSION} -m \"Release v${VERSION}\""
-echo "   2. git push origin v${VERSION}"
-echo "   3. Upload files from ${OUTDIR}/ to GitHub release"
+echo "To release:"
+echo "  git tag -a v${VERSION} -m 'Release v${VERSION}'"
+echo "  git push origin v${VERSION}"
+echo "  # GitHub Actions will create release automatically"

@@ -1,4 +1,28 @@
+# Dependencies
 node_modules/
-web/dist/
+
+# Build output (web/dist/ intentionally tracked for go:embed)
+dist/
+webdist/
+
+# Old versioned build folders
 v*.*.*/
-vibescanner*
+
+# Binaries
+vibescanner*.exe
+*.exe~
+vibescanner-windows-*
+vibescanner-darwin-*
+vibescanner-linux-*
+vibescanner-test*
+
+# Reports (generated at runtime)
+vibescanner-report-*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/

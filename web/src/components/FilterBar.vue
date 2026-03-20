@@ -1,69 +1,113 @@
 <template>
-  <div class="bg-vs-card border border-vs-border rounded-xl p-4 space-y-4">
-    <!-- Search -->
-    <div class="flex items-center space-x-2">
-      <span class="text-vs-text-muted">🔍</span>
+  <div class="filter-bar">
+    <div class="filter-pills">
+      <button
+        class="fpill"
+        :class="{ active: localFilters.severity.length === 0 }"
+        @click="clearFilters"
+      >
+        Tất cả <span class="fpill-n">{{ summary.total || 0 }}</span>
+      </button>
+      <button
+        class="fpill"
+        :class="{ active: localFilters.severity.includes('critical') }"
+        @click="toggleSeverity('critical')"
+      >
+        <span class="fpill-dot" style="background: var(--red)"></span>
+        Critical <span class="fpill-n">{{ summary.critical || 0 }}</span>
+      </button>
+      <button
+        class="fpill"
+        :class="{ active: localFilters.severity.includes('high') }"
+        @click="toggleSeverity('high')"
+      >
+        <span class="fpill-dot" style="background: var(--ora)"></span>
+        High <span class="fpill-n">{{ summary.high || 0 }}</span>
+      </button>
+      <button
+        class="fpill"
+        :class="{ active: localFilters.severity.includes('medium') }"
+        @click="toggleSeverity('medium')"
+      >
+        <span class="fpill-dot" style="background: var(--yel)"></span>
+        Medium <span class="fpill-n">{{ summary.medium || 0 }}</span>
+      </button>
+      <button
+        class="fpill"
+        :class="{ active: localFilters.severity.includes('low') }"
+        @click="toggleSeverity('low')"
+      >
+        <span class="fpill-dot" style="background: var(--blu)"></span>
+        Low <span class="fpill-n">{{ summary.low || 0 }}</span>
+      </button>
+    </div>
+
+    <div class="filter-search">
+      <div class="filter-search-icon">
+        <svg
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          stroke-width="2"
+        >
+          <circle cx="11" cy="11" r="8" />
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            d="M21 21l-4.35-4.35"
+          />
+        </svg>
+      </div>
       <input
-        v-model="localFilters.search"
+        class="search-input"
         type="text"
-        placeholder="Tìm kiếm findings..."
-        class="flex-1 bg-vs-darker border border-vs-border rounded-lg px-4 py-2 text-vs-text placeholder-vs-text-muted focus:outline-none focus:border-vs-primary"
+        v-model="localFilters.search"
         @input="updateFilters"
+        placeholder="Tìm file, rule ID, mô tả..."
       />
     </div>
 
-    <div class="flex flex-wrap gap-4">
-      <!-- Severity Filter -->
-      <div class="space-y-2">
-        <label class="text-sm text-vs-text-muted font-medium">Severity</label>
-        <div class="flex flex-wrap gap-2">
-          <button
-            v-for="sev in severities"
-            :key="sev.value"
-            @click="toggleSeverity(sev.value)"
-            class="px-3 py-1.5 rounded-lg text-sm transition-colors border"
-            :class="localFilters.severity.includes(sev.value)
-              ? sev.activeClass
-              : 'bg-vs-darker border-vs-border text-vs-text-muted'"
-          >
-            {{ sev.label }}
-          </button>
-        </div>
-      </div>
-
-      <!-- Category Filter -->
-      <div class="space-y-2">
-        <label class="text-sm text-vs-text-muted font-medium">Danh mục</label>
-        <div class="flex flex-wrap gap-2">
-          <button
-            v-for="cat in categories"
-            :key="cat.value"
-            @click="toggleCategory(cat.value)"
-            class="px-3 py-1.5 rounded-lg text-sm transition-colors border"
-            :class="localFilters.category.includes(cat.value)
-              ? cat.activeClass
-              : 'bg-vs-darker border-vs-border text-vs-text-muted'"
-          >
-            {{ cat.label }}
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Clear Filters -->
-    <div v-if="hasActiveFilters" class="flex justify-end">
-      <button
-        @click="clearFilters"
-        class="text-sm text-vs-text-muted hover:text-vs-primary transition-colors"
-      >
-        ✕ Xóa bộ lọc
+    <div class="filter-right">
+      <button class="btn">
+        <svg
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          stroke-width="2"
+          width="13"
+          height="13"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12"
+          />
+        </svg>
+        Sắp xếp
+      </button>
+      <button class="btn">
+        <svg
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          stroke-width="2"
+          width="13"
+          height="13"
+        >
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L13 13.414V19a1 1 0 01-.553.894l-4 2A1 1 0 017 21v-7.586L3.293 6.707A1 1 0 013 6V4z"
+          />
+        </svg>
+        Lọc
       </button>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, watch } from 'vue'
+import { ref, watch } from "vue";
 
 const props = defineProps({
   filters: {
@@ -71,79 +115,124 @@ const props = defineProps({
     default: () => ({
       severity: [],
       category: [],
-      search: ''
-    })
-  }
-})
+      search: "",
+    }),
+  },
+  summary: {
+    type: Object,
+    default: () => ({
+      critical: 0,
+      high: 0,
+      medium: 0,
+      low: 0,
+      total: 0,
+    }),
+  },
+});
 
-const emit = defineEmits(['update:filters'])
+const emit = defineEmits(["update:filters"]);
 
 const localFilters = ref({
   severity: [...props.filters.severity],
   category: [...props.filters.category],
-  search: props.filters.search
-})
+  search: props.filters.search,
+});
 
-watch(() => props.filters, (newFilters) => {
-  localFilters.value = {
-    severity: [...newFilters.severity],
-    category: [...newFilters.category],
-    search: newFilters.search
-  }
-}, { deep: true })
-
-const severities = [
-  { value: 'critical', label: 'Critical', activeClass: 'bg-vs-danger/20 border-vs-danger text-vs-danger' },
-  { value: 'high', label: 'High', activeClass: 'bg-orange-500/20 border-orange-500 text-orange-500' },
-  { value: 'medium', label: 'Medium', activeClass: 'bg-vs-warning/20 border-vs-warning text-vs-warning' },
-  { value: 'low', label: 'Low', activeClass: 'bg-vs-info/20 border-vs-info text-vs-info' },
-  { value: 'info', label: 'Info', activeClass: 'bg-gray-500/20 border-gray-500 text-gray-500' }
-]
-
-const categories = [
-  { value: 'security', label: '🔐 Bảo mật', activeClass: 'bg-vs-danger/20 border-vs-danger text-vs-danger' },
-  { value: 'quality', label: '✨ Chất lượng', activeClass: 'bg-vs-info/20 border-vs-info text-vs-info' },
-  { value: 'architecture', label: '🏗️ Kiến trúc', activeClass: 'bg-vs-secondary/20 border-vs-secondary text-vs-secondary' },
-  { value: 'secrets', label: '🔑 Secrets', activeClass: 'bg-pink-500/20 border-pink-500 text-pink-500' },
-  { value: 'performance', label: '⚡ Hiệu năng', activeClass: 'bg-vs-success/20 border-vs-success text-vs-success' }
-]
-
-const hasActiveFilters = computed(() => {
-  return localFilters.value.severity.length > 0 ||
-         localFilters.value.category.length > 0 ||
-         localFilters.value.search.length > 0
-})
+watch(
+  () => props.filters,
+  (newFilters) => {
+    localFilters.value = {
+      severity: [...newFilters.severity],
+      category: [...newFilters.category],
+      search: newFilters.search,
+    };
+  },
+  { deep: true },
+);
 
 const toggleSeverity = (sev) => {
-  const idx = localFilters.value.severity.indexOf(sev)
+  const idx = localFilters.value.severity.indexOf(sev);
   if (idx > -1) {
-    localFilters.value.severity.splice(idx, 1)
+    localFilters.value.severity.splice(idx, 1);
   } else {
-    localFilters.value.severity.push(sev)
+    localFilters.value.severity.push(sev);
   }
-  updateFilters()
-}
-
-const toggleCategory = (cat) => {
-  const idx = localFilters.value.category.indexOf(cat)
-  if (idx > -1) {
-    localFilters.value.category.splice(idx, 1)
-  } else {
-    localFilters.value.category.push(cat)
-  }
-  updateFilters()
-}
+  updateFilters();
+};
 
 const clearFilters = () => {
   localFilters.value = {
     severity: [],
-    category: [],
-    search: ''
-  }
-  updateFilters()
-}
+    category: localFilters.value.category,
+    search: localFilters.value.search,
+  };
+  updateFilters();
+};
 
 const updateFilters = () => {
-  emit('update:filters', { ...localFilters.value })
-}
+  emit("update:filters", { ...localFilters.value });
+};
 </script>
+
+<style scoped>
+.filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 24px 12px;
+}
+
+.filter-pills {
+  display: flex;
+  background: var(--bg2);
+  border: 1px solid var(--bd);
+  border-radius: var(--r-md);
+  padding: 3px;
+  gap: 2px;
+}
+
+.filter-search {
+  flex: 1;
+  max-width: 260px;
+  position: relative;
+}
+
+.filter-search-icon {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text3);
+  pointer-events: none;
+}
+.filter-search-icon svg {
+  width: 13px;
+  height: 13px;
+}
+
+.search-input {
+  width: 100%;
+  background: var(--bg2);
+  border: 1px solid var(--bd);
+  border-radius: var(--r-md);
+  color: var(--text1);
+  font-family: var(--sans);
+  font-size: 12px;
+  padding: 7px 10px 7px 32px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.search-input::placeholder {
+  color: var(--text3);
+}
+.search-input:focus {
+  border-color: var(--acc);
+  background: var(--bg2);
+}
+
+.filter-right {
+  margin-left: auto;
+  display: flex;
+  gap: 6px;
+}
+</style>

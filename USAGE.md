@@ -71,22 +71,7 @@ chmod +x vibescanner
 
 ### Cách 2: Build từ Source
 
-Yêu cầu: Go 1.22+, Node.js 18+
-
-```bash
-# Clone repo
-git clone https://github.com/nhh0718/vibe-scanner-.git
-cd vibescanner
-
-# Build web dashboard
-cd web
-npm install
-npm run build
-cd ..
-
-# Build binary
-go build -o vibescanner .
-```
+Xem hướng dẫn tại [README.md — Build from Source](./README.md#-build-from-source).
 
 ### Cách 3: Cài đặt Global (Khuyến nghị sau khi tải)
 
@@ -105,7 +90,7 @@ Sau khi tải binary, chạy lệnh sau để cài đặt vào PATH:
 Kiểm tra cài đặt:
 ```bash
 vibescanner --version
-# Output: vibescanner version 0.1.0
+# Output: vibescanner version 0.8.0
 ```
 
 ---
@@ -487,24 +472,6 @@ vibescanner ai-setup status
 
 # Cài model
 vibescanner ai-setup install qwen2.5-coder:3b
-```
-
-### Lỗi: Semgrep/Gitleaks không tìm thấy
-
-**Nguyên nhân**: Các công cụ này chưa được cài đặt
-
-**Giải pháp**:
-```bash
-# Cài Semgrep
-pip install semgrep
-
-# Hoặc
-curl -L https://github.com/returntocorp/semgrep/releases/latest/download/semgrep-linux-amd64 -o semgrep
-chmod +x semgrep
-sudo mv semgrep /usr/local/bin/
-
-# Cài Gitleaks
-# Truy cập: https://github.com/gitleaks/gitleaks/releases
 ```
 
 ### Lỗi: "Không thể bind port 7420"
