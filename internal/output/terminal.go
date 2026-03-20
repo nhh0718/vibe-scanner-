@@ -146,6 +146,8 @@ func printFinding(f models.Finding) {
 	body.WriteString("\n")
 	body.WriteString(ui.KeyValue("Mức độ", aggregation.GetSeverityLabel(f.Severity)))
 	body.WriteString("\n")
+	body.WriteString(ui.KeyValue("Nguồn", getEngineLabel(f.Engine)))
+	body.WriteString("\n")
 	body.WriteString(ui.KeyValue("Vị trí", fmt.Sprintf("%s:%d", f.File, f.Line)))
 	body.WriteString("\n\n")
 	body.WriteString(f.Message)
@@ -220,6 +222,26 @@ func getScoreStatus(score int) string {
 		return "Cần cải thiện"
 	default:
 		return "Nguy hiểm"
+	}
+}
+
+// getEngineLabel trả về label đẹp cho engine
+func getEngineLabel(engine string) string {
+	switch engine {
+	case "semgrep":
+		return "🔍 Semgrep"
+	case "gitleaks":
+		return "🔐 Gitleaks"
+	case "native-security":
+		return "🛡️ Native"
+	case "vibesecurity", "ast":
+		return "🌳 AST"
+	case "complexity":
+		return "📊 Complexity"
+	case "dependency-audit":
+		return "📦 Dependencies"
+	default:
+		return fmt.Sprintf("🔧 %s", engine)
 	}
 }
 

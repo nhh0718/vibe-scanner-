@@ -27,7 +27,7 @@ func (i MenuItem) FilterValue() string { return i.Title }
 type menuDelegate struct{}
 
 func (d menuDelegate) Height() int                             { return 2 }
-func (d menuDelegate) Spacing() int                           { return 1 }
+func (d menuDelegate) Spacing() int                           { return 0 }
 func (d menuDelegate) Update(_ tea.Msg, _ *list.Model) tea.Cmd { return nil }
 func (d menuDelegate) Render(w io.Writer, m list.Model, index int, listItem list.Item) {
 	i, ok := listItem.(MenuItem)
@@ -43,6 +43,8 @@ type model struct {
 	list     list.Model
 	choice   string
 	quitting bool
+	width    int
+	height   int
 }
 
 func (m model) Init() tea.Cmd {
@@ -52,8 +54,12 @@ func (m model) Init() tea.Cmd {
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
-		_ = msg
-		m.list.SetWidth(ui.MainColumnWidth - 8)
+		m.width = msg.Width
+		m.height = msg.Height
+		layout := ui.GetScreenLayout(msg.Width, true)
+		if layout.MainWidth > 2 {
+			m.list.SetWidth(layout.MainWidth - 2)
+		}
 		return m, nil
 
 	case tea.KeyMsg:
@@ -91,32 +97,18 @@ func (m model) View() string {
 		ver = "dev"
 	}
 
-	var side strings.Builder
-	side.WriteString(ui.SectionLabel("Trạng thái hệ thống"))
-	side.WriteString("\n\n")
-	side.WriteString(ui.KeyValue("Phiên bản", "v"+ver))
-	side.WriteString("\n")
-	side.WriteString(ui.KeyValue("Hệ điều hành", osName))
-	side.WriteString("\n")
-	side.WriteString(ui.KeyValue("Dashboard", "localhost:7420"))
-	side.WriteString("\n")
-	side.WriteString(ui.KeyValue("AI cục bộ", "Sẵn sàng cấu hình"))
-	side.WriteString("\n\n")
-	side.WriteString(ui.SectionLabel("Lộ trình đề xuất"))
-	side.WriteString("\n\n")
-	side.WriteString(ui.BulletList([]string{
-		"Quét dự án trước khi mở bảng điều khiển.",
-		"Thiết lập AI để nhận giải thích lỗi chi tiết.",
-		"Dùng cài đặt toàn cục để gọi lệnh ở mọi nơi.",
-	}))
+	var sb strings.Builder
+	sb.WriteString(ui.GetLogo())
+	sb.WriteString("\n")
+	sb.WriteString(ui.SuccessText("TRUNG TÂM ĐIỀU KHIỂN"))
+	sb.WriteString(" | ")
+	sb.WriteString(ui.Muted(fmt.Sprintf("v%s | %s", ver, osName)))
+	sb.WriteString("\n")
+	sb.WriteString(m.list.View())
+	sb.WriteString("\n")
+	sb.WriteString(ui.Muted("↑/↓ chọn  •  Enter  •  Q thoát"))
 
-	return ui.RenderScreen(
-		"TRUNG TÂM ĐIỀU KHIỂN",
-		fmt.Sprintf("VibeScanner chạy trên %s • giao diện dòng lệnh tối ưu", osName),
-		m.list.View(),
-		side.String(),
-		[]string{"↑/↓ di chuyển", "Enter chọn", "Q hoặc Esc thoát"},
-	)
+	return sb.String()
 }
 
 // interactiveCmd opens the TUI menu
@@ -140,37 +132,50 @@ func runInteractiveMenu() error {
 			},
 			MenuItem{
 				Number:      2,
+				Title:       "Lịch sử & Báo cáo",
+				Description: "Xem và quản lý các lần quét đã lưu",
+				Command:     "history",
+			},
+			MenuItem{
+				Number:      3,
 				Title:       "Xem bảng điều khiển",
 				Description: "Mở giao diện web hiển thị kết quả quét",
 				Command:     "serve",
 			},
 			MenuItem{
-				Number:      3,
+				Number:      4,
+				Title:       "Quản lý tác vụ",
+				Description: "Theo dõi và quản lý các tác vụ đang chạy",
+				Command:     "tasks",
+			},
+			MenuItem{
+				Number:      5,
 				Title:       "Cài đặt AI",
 				Description: "Thiết lập và quản lý các mô hình AI",
 				Command:     "ai-setup",
 			},
 			MenuItem{
-				Number:      4,
+				Number:      6,
 				Title:       "Cấu hình hệ thống",
 				Description: "Xem và chỉnh sửa các thiết lập",
 				Command:     "config",
 			},
 			MenuItem{
-				Number:      5,
+				Number:      7,
 				Title:       "Cài đặt toàn cục",
 				Description: "Thêm công cụ vào PATH hệ thống",
 				Command:     "install",
 			},
 			MenuItem{
-				Number:      6,
+				Number:      8,
 				Title:       "Trợ giúp",
 				Description: "Hiển thị hướng dẫn sử dụng",
 				Command:     "help",
 			},
 		}
 
-		l := list.New(items, menuDelegate{}, ui.MainColumnWidth-8, 18)
+		layout := ui.GetScreenLayout(0, true)
+		l := list.New(items, menuDelegate{}, layout.MainWidth-2, 18)
 		l.Title = ""
 		l.SetShowStatusBar(false)
 		l.SetFilteringEnabled(false)
@@ -203,8 +208,12 @@ func runInteractiveMenu() error {
 			runScanInteractive(path)
 			fmt.Println("\n" + ui.GetSuccessBox("Quét hoàn tất. Nhấn Enter để quay lại menu."))
 			fmt.Scanln()
+		case "history":
+			runHistoryInteractive()
 		case "serve":
 			runServeInteractive()
+		case "tasks":
+			runTasksInteractive()
 		case "ai-setup":
 			runAISetupInteractive()
 		case "config":
@@ -220,7 +229,9 @@ func runInteractiveMenu() error {
 				ui.SectionLabel("Hướng dẫn nhanh"),
 				"",
 				"vibescanner scan <đường_dẫn>    Quét mã nguồn dự án",
+				"vibescanner history             Xem lịch sử và báo cáo",
 				"vibescanner serve               Mở bảng điều khiển web",
+				"vibescanner tasks               Quản lý tác vụ",
 				"vibescanner ai-setup            Thiết lập AI cục bộ",
 				"vibescanner config              Quản lý cấu hình",
 				"vibescanner install             Cài đặt toàn cục",
@@ -247,15 +258,15 @@ func runServeInteractive() error {
 		fmt.Scanln()
 		return nil
 	}
-	
+
 	// Run dashboard - this will block until Ctrl+C
 	if err := output.ServeDashboard(results, 7420); err != nil {
 		fmt.Println(ui.GetErrorBox(fmt.Sprintf("Lỗi server: %v", err)))
 	} else {
-		fmt.Println(ui.GetSuccessBox("Dashboard đã dừng thành công"))
+		fmt.Println(ui.GetDashboardStoppedBanner())
 	}
-	
-	fmt.Println("\n" + ui.GetInfoBox("Nhấn Enter để quay lại menu."))
+
+	fmt.Println(ui.GetInfoBox("Nhấn Enter để quay lại menu."))
 	fmt.Scanln()
 	return nil
 }

@@ -82,10 +82,13 @@ func (m AISetupModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, tea.Quit
 			}
 			// Go back to menu from any state
+			width, height := m.width, m.height
 			m.state = "menu"
 			m.err = nil
 			m.message = ""
 			m = initialAISetupModel()
+			m.width = width
+			m.height = height
 			return m, nil
 
 		case "ctrl+c":
@@ -119,7 +122,10 @@ func (m AISetupModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		case "b":
 			if m.state != "menu" {
+				width, height := m.width, m.height
 				m = initialAISetupModel()
+				m.width = width
+				m.height = height
 			}
 		}
 
@@ -138,7 +144,10 @@ func (m AISetupModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.state = "installing"
 			return m, nil
 		}
+		width, height := m.width, m.height
 		m = initialAISetupModel()
+		m.width = width
+		m.height = height
 		m.message = fmt.Sprintf("Đã cài đặt model %s", msg.model)
 		return m, nil
 
@@ -148,7 +157,10 @@ func (m AISetupModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.state = "remove"
 			return m, nil
 		}
+		width, height := m.width, m.height
 		m = initialAISetupModel()
+		m.width = width
+		m.height = height
 		m.message = fmt.Sprintf("Đã gỡ model %s", msg.model)
 		return m, nil
 	}
@@ -273,129 +285,95 @@ func (m AISetupModel) View() string {
 }
 
 func (m AISetupModel) menuView() string {
-	var main strings.Builder
+	var sb strings.Builder
+	sb.WriteString(ui.GetLogo())
+	sb.WriteString("\n")
+	sb.WriteString(ui.SuccessText("TRUNG TÂM AI CỤC BỘ"))
+	sb.WriteString(" | ")
+	sb.WriteString(ui.Muted("Ollama + Models"))
+	sb.WriteString("\n")
+
 	if m.message != "" {
-		main.WriteString(ui.SuccessText(m.message))
-		main.WriteString("\n\n")
+		sb.WriteString(ui.SuccessText(m.message))
+		sb.WriteString("\n")
 	}
+
 	for i, item := range m.menuItems {
-		main.WriteString(ui.NumberedLine(i+1, item.title, item.desc, m.cursor == i))
-		main.WriteString("\n\n")
+		sb.WriteString(ui.NumberedLine(i+1, item.title, item.desc, m.cursor == i))
+		if i < len(m.menuItems)-1 {
+			sb.WriteString("\n")
+		}
 	}
 
-	var side strings.Builder
-	side.WriteString(ui.SectionLabel("Tình trạng hiện tại"))
-	side.WriteString("\n\n")
-	if ai.IsOllamaAvailable() {
-		side.WriteString(ui.KeyValue("Ollama", "Đang sẵn sàng"))
-		models, _ := ai.ListInstalledModels()
-		side.WriteString("\n")
-		side.WriteString(ui.KeyValue("Số model", fmt.Sprintf("%d", len(models))))
-	} else {
-		side.WriteString(ui.KeyValue("Ollama", "Chưa cài đặt"))
-		side.WriteString("\n")
-		side.WriteString(ui.KeyValue("Khuyến nghị", "Tải tự động"))
-	}
-	if m.message == "" {
-		side.WriteString("\n\n")
-		side.WriteString(ui.SectionLabel("Gợi ý"))
-		side.WriteString("\n\n")
-		side.WriteString(ui.BulletList([]string{
-			"Ưu tiên model nhỏ nếu RAM ít.",
-			"Cài Ollama trước khi thêm model.",
-			"Nhấn B để quay lại trang trước.",
-		}))
-	}
+	sb.WriteString("\n")
+	sb.WriteString(ui.Muted("↑/↓ chọn  •  Enter  •  B  •  Q"))
 
-	return ui.RenderScreen(
-		"TRUNG TÂM AI CỤC BỘ",
-		"Thiết lập Ollama và các mô hình AI ngay trong dòng lệnh",
-		strings.TrimSpace(main.String()),
-		side.String(),
-		[]string{"↑/↓ di chuyển", "Enter chọn", "B quay lại", "Q thoát"},
-	)
+	return sb.String()
 }
 
 func (m AISetupModel) statusView() string {
-	var main strings.Builder
+	var sb strings.Builder
+	sb.WriteString(ui.GetLogo())
+	sb.WriteString("\n")
+	sb.WriteString(ui.SuccessText("TRẠNG THÁI AI"))
+	sb.WriteString(" | ")
+	sb.WriteString(ui.Muted("Ollama status"))
+	sb.WriteString("\n")
+
 	if m.status == "running" {
-		main.WriteString(ui.SuccessText("Ollama đang hoạt động bình thường"))
-		main.WriteString("\n\n")
+		sb.WriteString(ui.SuccessText("✓ Ollama đang hoạt động"))
+		sb.WriteString("\n")
 		if len(m.models) == 0 {
-			main.WriteString(ui.WarningText("Chưa có model nào được cài đặt"))
+			sb.WriteString(ui.WarningText("Chưa có model nào"))
 		} else {
-			main.WriteString(ui.SectionLabel("Model đã cài"))
-			main.WriteString("\n\n")
+			sb.WriteString(ui.SectionLabel("Models:"))
 			for i, model := range m.models {
-				main.WriteString(fmt.Sprintf("[%02d] %s\n", i+1, model))
+				sb.WriteString(fmt.Sprintf("  %d. %s", i+1, model))
+				if i < len(m.models)-1 {
+					sb.WriteString("\n")
+				}
 			}
 		}
 	} else {
-		main.WriteString(ui.ErrorText("Ollama chưa chạy hoặc chưa cài đặt"))
-		main.WriteString("\n\n")
-		main.WriteString(ui.BulletList([]string{
-			"Tải Ollama từ trang chính thức.",
-			"Hoàn tất cài đặt theo hệ điều hành.",
-			"Khởi chạy dịch vụ bằng lệnh: ollama serve",
-		}))
+		sb.WriteString(ui.ErrorText("✗ Ollama chưa chạy"))
+		sb.WriteString("\n")
+		sb.WriteString("Tải Ollama từ ollama.ai")
 	}
 
-	var side strings.Builder
-	side.WriteString(ui.SectionLabel("Tóm tắt"))
-	side.WriteString("\n\n")
-	side.WriteString(ui.KeyValue("Runtime", map[bool]string{true: "Đang chạy", false: "Chưa sẵn sàng"}[m.status == "running"]))
-	side.WriteString("\n")
-	side.WriteString(ui.KeyValue("Model đã cài", fmt.Sprintf("%d", len(m.models))))
-	side.WriteString("\n\n")
-	side.WriteString(ui.SectionLabel("Phím tắt"))
-	side.WriteString("\n\n")
-	side.WriteString(ui.BulletList([]string{"B quay lại menu AI", "Q thoát giao diện AI"}))
+	sb.WriteString("\n")
+	sb.WriteString(ui.Muted("B  •  Q"))
 
-	return ui.RenderScreen(
-		"TRẠNG THÁI HỆ THỐNG AI",
-		"Kiểm tra runtime Ollama và các model hiện có",
-		strings.TrimSpace(main.String()),
-		side.String(),
-		[]string{"B quay lại", "Q thoát"},
-	)
+	return sb.String()
 }
 
 func (m AISetupModel) listView() string {
-	var main strings.Builder
+	var sb strings.Builder
+	sb.WriteString(ui.GetLogo())
+	sb.WriteString("\n")
+	sb.WriteString(ui.SuccessText("DANH SÁCH MODELS"))
+	sb.WriteString(" | ")
+	sb.WriteString(ui.Muted(fmt.Sprintf("%d model", len(m.models))))
+	sb.WriteString("\n")
+
 	if m.err != nil {
-		main.WriteString(ui.ErrorText(m.err.Error()))
+		sb.WriteString(ui.ErrorText(m.err.Error()))
 	} else if len(m.models) == 0 {
-		main.WriteString(ui.WarningText("Chưa có model nào được cài đặt"))
-		main.WriteString("\n\n")
-		main.WriteString("Hãy vào mục cài đặt model để tải model đầu tiên.")
+		sb.WriteString(ui.WarningText("Chưa có model nào"))
+		sb.WriteString("\n")
+		sb.WriteString("Vào mục cài đặt để tải model đầu tiên")
 	} else {
-		main.WriteString(ui.SectionLabel("Danh sách model hiện có"))
-		main.WriteString("\n\n")
 		for i, model := range m.models {
-			main.WriteString(fmt.Sprintf("[%02d] %-22s Trạng thái: sẵn sàng\n", i+1, model))
+			sb.WriteString(fmt.Sprintf("  %d. %s", i+1, model))
+			if i < len(m.models)-1 {
+				sb.WriteString("\n")
+			}
 		}
 	}
 
-	var side strings.Builder
-	side.WriteString(ui.SectionLabel("Tổng kết"))
-	side.WriteString("\n\n")
-	side.WriteString(ui.KeyValue("Số lượng", fmt.Sprintf("%d model", len(m.models))))
-	side.WriteString("\n\n")
-	side.WriteString(ui.SectionLabel("Gợi ý"))
-	side.WriteString("\n\n")
-	side.WriteString(ui.BulletList([]string{
-		"Model 3B phù hợp đa số máy cá nhân.",
-		"Model 7B+ cần RAM cao hơn.",
-		"Dọn model cũ để tiết kiệm dung lượng.",
-	}))
+	sb.WriteString("\n")
+	sb.WriteString(ui.Muted("B  •  Q"))
 
-	return ui.RenderScreen(
-		"DANH SÁCH MODEL AI",
-		"Theo dõi các model hiện đã có trong máy",
-		strings.TrimSpace(main.String()),
-		side.String(),
-		[]string{"B quay lại", "Q thoát"},
-	)
+	return sb.String()
 }
 
 func (m AISetupModel) installView() string {
@@ -404,103 +382,85 @@ func (m AISetupModel) installView() string {
 		modelName = "qwen2.5-coder:3b"
 	}
 
-	var main strings.Builder
+	var sb strings.Builder
+	sb.WriteString(ui.GetLogo())
+	sb.WriteString("\n")
+	sb.WriteString(ui.SuccessText("ĐANG CÀI MODEL"))
+	sb.WriteString(" | ")
+	sb.WriteString(ui.Muted(modelName))
+	sb.WriteString("\n")
+
 	if m.err != nil {
-		main.WriteString(ui.ErrorText(m.err.Error()))
+		sb.WriteString(ui.ErrorText(m.err.Error()))
 	} else {
-		main.WriteString(m.spinner.View())
-		main.WriteString(" ")
-		main.WriteString(ui.SuccessText("Đang tải model: "+modelName))
-		main.WriteString("\n\n")
-		main.WriteString("Lần cài đầu tiên có thể mất vài phút tùy theo tốc độ mạng và cấu hình máy.")
+		sb.WriteString(m.spinner.View())
+		sb.WriteString(" ")
+		sb.WriteString("Đang tải...")
 	}
 
-	var side strings.Builder
-	side.WriteString(ui.SectionLabel("Lưu ý khi cài đặt"))
-	side.WriteString("\n\n")
-	side.WriteString(ui.BulletList([]string{
-		"Không tắt Ollama trong lúc tải model.",
-		"Đảm bảo còn đủ dung lượng ổ đĩa.",
-		"Model lớn sẽ tải lâu hơn đáng kể.",
-	}))
+	sb.WriteString("\n")
+	sb.WriteString(ui.Muted("B  •  Q"))
 
-	return ui.RenderScreen(
-		"TIẾN TRÌNH CÀI ĐẶT MODEL",
-		"Theo dõi tiến trình tải và cài model AI",
-		strings.TrimSpace(main.String()),
-		side.String(),
-		[]string{"B quay lại sau khi hoàn tất", "Q thoát"},
-	)
+	return sb.String()
 }
 
 func (m AISetupModel) removeView() string {
-	var main strings.Builder
+	var sb strings.Builder
+	sb.WriteString(ui.GetLogo())
+	sb.WriteString("\n")
+	sb.WriteString(ui.SuccessText("GỠ MODEL"))
+	sb.WriteString(" | ")
+	sb.WriteString(ui.Muted(fmt.Sprintf("%d model", len(m.models))))
+	sb.WriteString("\n")
+
 	if m.err != nil {
-		main.WriteString(ui.ErrorText(m.err.Error()))
+		sb.WriteString(ui.ErrorText(m.err.Error()))
 	} else {
-		main.WriteString(ui.SectionLabel("Chọn model cần gỡ"))
-		main.WriteString("\n\n")
+		sb.WriteString(ui.SectionLabel("Chọn model cần gỡ:"))
+		sb.WriteString("\n")
 		for i, model := range m.models {
-			main.WriteString(ui.NumberedLine(i+1, model, "Nhấn Enter để gỡ model này khỏi máy", m.cursor == i))
-			main.WriteString("\n\n")
+			sb.WriteString(ui.NumberedLine(i+1, model, "Enter để gỡ", m.cursor == i))
+			if i < len(m.models)-1 {
+				sb.WriteString("\n")
+			}
 		}
 	}
 
-	var side strings.Builder
-	side.WriteString(ui.SectionLabel("Cảnh báo"))
-	side.WriteString("\n\n")
-	side.WriteString(ui.BulletList([]string{
-		"Gỡ model sẽ giải phóng dung lượng ổ đĩa.",
-		"Model đã gỡ sẽ cần tải lại nếu muốn dùng tiếp.",
-		"Hãy giữ lại ít nhất một model thường dùng.",
-	}))
+	sb.WriteString("\n")
+	sb.WriteString(ui.Muted("↑/↓  •  Enter  •  B  •  Q"))
 
-	return ui.RenderScreen(
-		"GỠ BỎ MODEL AI",
-		"Quản lý dung lượng bằng cách xóa model không còn sử dụng",
-		strings.TrimSpace(main.String()),
-		side.String(),
-		[]string{"↑/↓ chọn model", "Enter gỡ", "B quay lại", "Q thoát"},
-	)
+	return sb.String()
 }
 
 func (m AISetupModel) selectModelView() string {
-	var main strings.Builder
+	var sb strings.Builder
+	sb.WriteString(ui.GetLogo())
+	sb.WriteString("\n")
+	sb.WriteString(ui.SuccessText("CHỌN MODEL"))
+	sb.WriteString(" | ")
+	sb.WriteString(ui.Muted("qwen2.5-coder"))
+	sb.WriteString("\n")
 
 	modelDescriptions := map[string]string{
-		"qwen2.5-coder:0.5b": "Siêu nhẹ - 0.5B params (~350MB) - Máy yếu, RAM < 4GB",
-		"qwen2.5-coder:1.5b": "Nhẹ - 1.5B params (~1GB) - Máy trung bình, RAM 4-8GB",
-		"qwen2.5-coder:3b":   "Cân bằng - 3B params (~2GB) - Máy tốt, RAM 8-16GB (Khuyến nghị)",
-		"qwen2.5-coder:7b":   "Mạnh - 7B params (~4.7GB) - Máy mạnh, RAM 16GB+",
-		"qwen2.5-coder:14b":  "Rất mạnh - 14B params (~9GB) - Máy rất mạnh, RAM 32GB+",
-		"qwen2.5-coder:32b":  "Cực mạnh - 32B params (~20GB) - Workstation, RAM 64GB+",
+		"qwen2.5-coder:0.5b": "RAM < 4GB",
+		"qwen2.5-coder:1.5b": "RAM 4-8GB",
+		"qwen2.5-coder:3b":   "RAM 8-16GB (Khuyến nghị)",
+		"qwen2.5-coder:7b":   "RAM 16GB+",
+		"qwen2.5-coder:14b":  "RAM 32GB+",
+		"qwen2.5-coder:32b":  "RAM 64GB+",
 	}
 
-	main.WriteString(ui.SectionLabel("Chọn model phù hợp với cấu hình máy"))
-	main.WriteString("\n\n")
 	for i, model := range m.models {
-		main.WriteString(ui.NumberedLine(i+1, model, modelDescriptions[model], m.cursor == i))
-		main.WriteString("\n\n")
+		sb.WriteString(ui.NumberedLine(i+1, model, modelDescriptions[model], m.cursor == i))
+		if i < len(m.models)-1 {
+			sb.WriteString("\n")
+		}
 	}
 
-	var side strings.Builder
-	side.WriteString(ui.SectionLabel("Khuyến nghị nhanh"))
-	side.WriteString("\n\n")
-	side.WriteString(ui.BulletList([]string{
-		"0.5B-1.5B: máy yếu hoặc laptop văn phòng.",
-		"3B: lựa chọn cân bằng cho đa số dự án.",
-		"7B trở lên: ưu tiên máy có RAM cao.",
-	}))
-	side.WriteString("\n\n")
-	side.WriteString(ui.KeyValue("Mặc định gợi ý", "qwen2.5-coder:3b"))
+	sb.WriteString("\n")
+	sb.WriteString(ui.Muted("↑/↓  •  Enter  •  B  •  Q"))
 
-	return ui.RenderScreen(
-		"CHỌN MODEL ĐỂ CÀI ĐẶT",
-		"Danh sách model được đề xuất theo cấu hình máy",
-		strings.TrimSpace(main.String()),
-		side.String(),
-		[]string{"↑/↓ chọn model", "Enter cài đặt", "B quay lại", "Q thoát"},
-	)
+	return sb.String()
 }
 
 func (m AISetupModel) removeProgressView() string {
@@ -509,24 +469,26 @@ func (m AISetupModel) removeProgressView() string {
 		modelName = m.models[m.cursor]
 	}
 
-	var main strings.Builder
+	var sb strings.Builder
+	sb.WriteString(ui.GetLogo())
+	sb.WriteString("\n")
+	sb.WriteString(ui.SuccessText("ĐANG GỠ MODEL"))
+	sb.WriteString(" | ")
+	sb.WriteString(ui.Muted(modelName))
+	sb.WriteString("\n")
+
 	if m.err != nil {
-		main.WriteString(ui.ErrorText(m.err.Error()))
+		sb.WriteString(ui.ErrorText(m.err.Error()))
 	} else {
-		main.WriteString(m.spinner.View())
-		main.WriteString(" ")
-		main.WriteString(ui.WarningText("Đang gỡ model: "+modelName))
-		main.WriteString("\n\n")
-		main.WriteString("Tiến trình gỡ đang chạy, vui lòng chờ hoàn tất.")
+		sb.WriteString(m.spinner.View())
+		sb.WriteString(" ")
+		sb.WriteString("Đang gỡ...")
 	}
 
-	return ui.RenderScreen(
-		"TIẾN TRÌNH GỠ MODEL",
-		"Theo dõi quá trình xóa model khỏi máy",
-		strings.TrimSpace(main.String()),
-		ui.BulletList([]string{"Giữ kết nối với Ollama trong lúc gỡ model.", "Không đóng chương trình giữa chừng nếu chưa hoàn tất."}),
-		[]string{"B quay lại sau khi hoàn tất", "Q thoát"},
-	)
+	sb.WriteString("\n")
+	sb.WriteString(ui.Muted("B  •  Q"))
+
+	return sb.String()
 }
 
 // getRecommendedModels returns a list of recommended models based on system specs

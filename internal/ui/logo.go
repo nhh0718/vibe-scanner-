@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
@@ -92,4 +93,92 @@ func GetErrorBox(content string) string {
 		Foreground(RedColor)
 	
 	return errorStyle.Render("✗ " + content)
+}
+
+// DashboardInfo holds info for the dashboard banner
+type DashboardInfo struct {
+	URL          string
+	ProjectName  string
+	FindingCount int
+	Timestamp    string
+	HealthScore  int
+}
+
+// GetDashboardBanner returns a styled CLI panel for the running dashboard
+func GetDashboardBanner(info DashboardInfo) string {
+	cyan := lipgloss.Color("#22D3EE")
+	dimWhite := lipgloss.Color("#CBD5E1")
+
+	headerStyle := lipgloss.NewStyle().
+		Bold(true).
+		Foreground(lipgloss.Color("#FFFFFF")).
+		Background(BlueColor).
+		Padding(0, 2).
+		Align(lipgloss.Center)
+
+	urlStyle := lipgloss.NewStyle().
+		Foreground(cyan).
+		Bold(true).
+		Underline(true)
+
+	labelW := lipgloss.NewStyle().
+		Foreground(mutedColor).
+		Width(14)
+
+	valStyle := lipgloss.NewStyle().
+		Foreground(dimWhite).
+		Bold(true)
+
+	scoreStyle := lipgloss.NewStyle().Bold(true)
+	if info.HealthScore >= 70 {
+		scoreStyle = scoreStyle.Foreground(greenColor)
+	} else if info.HealthScore >= 40 {
+		scoreStyle = scoreStyle.Foreground(yellowColor)
+	} else {
+		scoreStyle = scoreStyle.Foreground(RedColor)
+	}
+
+	divider := lipgloss.NewStyle().Foreground(subtleColor).Render(strings.Repeat("─", 48))
+
+	findingsLabel := "vấn đề phát hiện"
+	if info.FindingCount == 0 {
+		findingsLabel = "không có vấn đề"
+	}
+
+	var lines []string
+	lines = append(lines, headerStyle.Render("  BẢNG ĐIỀU KHIỂN WEB  "))
+	lines = append(lines, divider)
+	lines = append(lines, "")
+	lines = append(lines, labelW.Render("  URL")+" "+urlStyle.Render(info.URL))
+	lines = append(lines, labelW.Render("  Dự án")+" "+valStyle.Render(info.ProjectName))
+	lines = append(lines, labelW.Render("  Findings")+" "+valStyle.Render(fmt.Sprintf("%d %s", info.FindingCount, findingsLabel)))
+	if info.HealthScore > 0 {
+		lines = append(lines, labelW.Render("  Health")+" "+scoreStyle.Render(fmt.Sprintf("%d/100", info.HealthScore)))
+	}
+	if info.Timestamp != "" {
+		lines = append(lines, labelW.Render("  Quét lúc")+" "+lipgloss.NewStyle().Foreground(mutedColor).Render(info.Timestamp))
+	}
+	lines = append(lines, "")
+	lines = append(lines, divider)
+
+	hintKey := lipgloss.NewStyle().Foreground(highlightColor).Bold(true)
+	hintDesc := lipgloss.NewStyle().Foreground(mutedColor)
+	lines = append(lines, "  "+hintKey.Render("Ctrl+C")+" "+hintDesc.Render("dừng server")+"    "+hintKey.Render("Browser")+" "+hintDesc.Render("tự động mở"))
+
+	content := strings.Join(lines, "\n")
+
+	boxStyle := lipgloss.NewStyle().
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(BlueColor).
+		Background(surfaceSoft).
+		Foreground(whiteSoftColor).
+		Padding(1, 2).
+		Width(56)
+
+	return boxStyle.Render(content)
+}
+
+// GetDashboardStoppedBanner returns a styled message when dashboard stops
+func GetDashboardStoppedBanner() string {
+	return GetSuccessBox("Dashboard đã dừng thành công")
 }

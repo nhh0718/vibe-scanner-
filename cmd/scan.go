@@ -61,9 +61,12 @@ func performScan(path, format string, autoOpen bool) error {
 		output.PrintTerminal(results)
 	}
 
-	// Save to cache for serve command
-	if err := output.SaveLastScan(results); err != nil {
-		fmt.Printf("⚠️  Không thể lưu cache: %v\n", err)
+	// Save to reports directory with timestamp and project name
+	reportInfo, err := output.SaveScanReport(results)
+	if err != nil {
+		fmt.Printf("⚠️ Không thể lưu báo cáo: %v\n", err)
+	} else {
+		fmt.Printf("✅ Đã lưu báo cáo: %s\n", reportInfo.Filename)
 	}
 
 	return nil

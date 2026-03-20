@@ -36,29 +36,19 @@ func ScanProject(path string) (*models.ScanResult, error) {
 	}
 
 	// Chạy các engine
-	wg.Add(4)
-	
+	fmt.Println("🌳 AST Engine (VibeSecurity) - Phân tích cú pháp...")
+	wg.Add(2)
+
 	go func() {
 		defer wg.Done()
-		f, _ := RunSemgrep(path)
+		f := RunTreeSitterEngine(path)
 		collect(f)
 	}()
-	
+
 	go func() {
 		defer wg.Done()
-		f, _ := RunGitleaks(path)
-		collect(f)
-	}()
-	
-	go func() {
-		defer wg.Done()
-		f, _ := RunComplexity(path)
-		collect(f)
-	}()
-	
-	go func() {
-		defer wg.Done()
-		f, _ := RunDependencyAudit(path)
+		f, status := RunGitleaksWithStatus(path)
+		fmt.Println(status)
 		collect(f)
 	}()
 

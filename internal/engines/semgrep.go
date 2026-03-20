@@ -14,10 +14,10 @@ import (
 
 // RunSemgrep chạy Semgrep và trả về findings
 func RunSemgrep(path string) ([]models.Finding, error) {
-	// Check and download semgrep if needed
+	// External Semgrep is optional; native security engine handles core coverage.
 	semgrepBin, err := getSemgrepBinary()
 	if err != nil {
-		return nil, fmt.Errorf("không thể setup Semgrep: %w", err)
+		return []models.Finding{}, nil
 	}
 
 	// Run semgrep with JSON output
@@ -98,15 +98,49 @@ func parseSemgrepOutput(output []byte, basePath string) ([]models.Finding, error
 	return findings, nil
 }
 
-// getSemgrepBinary trả về đường dẫn đến semgrep binary, tự download nếu chưa có
+// getSemgrepBinary trả về đường dẫn đến semgrep binary, tự cài qua pip nếu chưa có
 func getSemgrepBinary() (string, error) {
 	// First, check if semgrep is in PATH
 	if path, err := exec.LookPath("semgrep"); err == nil {
 		return path, nil
 	}
 
-	// TODO: Implement auto-download for the appropriate platform
-	return "", fmt.Errorf("semgrep không tìm thấy. Vui lòng cài đặt: https://semgrep.dev/docs/getting-started")
+	// Try to install via pip
+	fmt.Println("⬇️  Đang cài đặt Semgrep qua pip...")
+	if err := installSemgrepViaPip(); err != nil {
+		return "", fmt.Errorf("không thể cài Semgrep: %w", err)
+	}
+
+	// Try again after install
+	if path, err := exec.LookPath("semgrep"); err == nil {
+		return path, nil
+	}
+
+	return "", fmt.Errorf("đã cài Semgrep nhưng không tìm thấy trong PATH")
+}
+
+// installSemgrepViaPip cài Semgrep qua pip
+func installSemgrepViaPip() error {
+	// Tìm python
+	pythonCmd := "python3"
+	if _, err := exec.LookPath("python3"); err != nil {
+		if _, err := exec.LookPath("python"); err == nil {
+			pythonCmd = "python"
+		} else {
+			return fmt.Errorf("không tìm thấy Python. Vui lòng cài Python từ https://python.org")
+		}
+	}
+
+	fmt.Println("📦 Đang cài Semgrep qua pip (có thể mất vài phút)...")
+	
+	cmd := exec.Command(pythonCmd, "-m", "pip", "install", "--user", "semgrep")
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("lỗi cài đặt: %w\n%s", err, string(output))
+	}
+
+	fmt.Println("✅ Semgrep đã được cài đặt")
+	return nil
 }
 
 // determineCategory xác định category dựa trên rule ID và metadata

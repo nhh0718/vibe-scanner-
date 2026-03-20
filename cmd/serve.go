@@ -3,8 +3,8 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/spf13/cobra"
 	"github.com/nhh0718/vibe-scanner-/internal/output"
+	"github.com/spf13/cobra"
 )
 
 var serveCmd = &cobra.Command{
@@ -20,7 +20,6 @@ var serveCmd = &cobra.Command{
 			return fmt.Errorf("không tìm thấy kết quả scan trước đó: %w", err)
 		}
 
-		fmt.Printf("🌐 Mở dashboard tại http://localhost:%d\n", port)
 		return output.ServeDashboard(results, port)
 	},
 }
